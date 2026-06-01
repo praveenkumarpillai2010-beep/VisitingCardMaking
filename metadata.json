@@ -1,0 +1,6 @@
+{
+  "name": "Pillai'Play Visiting Card Maker",
+  "description": "Create, customize, export, and share professional visiting/business cards with powerful custom design tools, QR codes, templates, and an AI card generator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

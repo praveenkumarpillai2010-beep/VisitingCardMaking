@@ -36,6 +36,9 @@ class CardViewModel(application: Application) : AndroidViewModel(application) {
     private val _aiSuccess = MutableStateFlow(false)
     val aiSuccess: StateFlow<Boolean> = _aiSuccess.asStateFlow()
 
+    private val _aiOptions = MutableStateFlow<List<GeminiService.CardDesignOption>>(emptyList())
+    val aiOptions: StateFlow<List<GeminiService.CardDesignOption>> = _aiOptions.asStateFlow()
+
     // Preferences-based states for reactive UI
     private val _isUserPremium = MutableStateFlow(prefs.accountType == "Premium")
     val isUserPremium: StateFlow<Boolean> = _isUserPremium.asStateFlow()
@@ -104,6 +107,7 @@ class CardViewModel(application: Application) : AndroidViewModel(application) {
 
     fun upgradeSubscription(plan: String) {
         prefs.subscriptionPlan = plan
+        prefs.accountType = "Premium"
         _isUserPremium.value = true
     }
 
@@ -215,61 +219,45 @@ class CardViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // AI CARD GENERATION CLIENT
-    fun triggerAICardGeneration(name: String, businessType: String, companyName: String) {
+    fun triggerAICardGeneration(
+        name: String,
+        companyName: String,
+        jobTitle: String,
+        phoneNumber: String,
+        email: String,
+        website: String,
+        address: String,
+        category: String,
+        preferredColor: String,
+        preferredStyle: String,
+        logoUri: String?,
+        photoUri: String?
+    ) {
         _aiLoading.value = true
         _aiError.value = null
         _aiSuccess.value = false
+        _aiOptions.value = emptyList()
 
         GeminiService.generateCardLayout(
             name = name,
-            businessType = businessType,
             companyName = companyName,
+            jobTitle = jobTitle,
+            phoneNumber = phoneNumber,
+            email = email,
+            website = website,
+            address = address,
+            category = category,
+            preferredColor = preferredColor,
+            preferredStyle = preferredStyle,
+            logoUri = logoUri,
+            photoUri = photoUri,
             callback = object : GeminiService.AIAssistantCallback {
-                override fun onSuccess(
-                    themeName: String,
-                    backgroundColor: String,
-                    gradientEndColor: String,
-                    primaryColor: String,
-                    fontStyle: String,
-                    qrX: Float,
-                    qrY: Float,
-                    visibleFields: List<String>
-                ) {
-                    val fieldsStr = StringBuilder("[")
-                    visibleFields.forEachIndexed { idx, field ->
-                        fieldsStr.append("\"").append(field).append("\"")
-                        if (idx < visibleFields.size - 1) fieldsStr.append(",")
-                    }
-                    fieldsStr.append("]")
-
-                    viewModelScope.launch(Dispatchers.IO) {
-                        try {
-                            val newAICard = UserCard(
-                                cardName = "$name\'s $businessType Card",
-                                templateId = "ai_template",
-                                themeName = themeName,
-                                fullName = name,
-                                companyName = companyName,
-                                jobTitle = "$businessType Professional",
-                                backgroundColor = backgroundColor,
-                                gradientEndColor = gradientEndColor,
-                                qrCodeColor = primaryColor,
-                                fontStyle = fontStyle,
-                                qrCodeX = qrX,
-                                qrCodeY = qrY,
-                                visibleFieldsJson = fieldsStr.toString(),
-                                lastUpdated = System.currentTimeMillis()
-                            )
-                            val insertedId = repository.saveCard(newAICard)
-                            _editingCard.value = newAICard.copy(id = insertedId.toInt())
-                            
-                            _aiSuccess.value = true
-                            _aiLoading.value = false
-                        } catch (e: Exception) {
-                            _aiError.value = "DB Save failed: ${e.message}"
-                            _aiLoading.value = false
-                        }
-                    }
+                override fun onSuccess(options: List<GeminiService.CardDesignOption>) {
+                    _aiOptions.value = options
+                    _aiSuccess.value = true
+                    _aiLoading.value = false
+                    // Track generation Count
+                    prefs.aiGenerationsCount = prefs.aiGenerationsCount + 1
                 }
 
                 override fun onFailure(error: String) {
@@ -280,8 +268,121 @@ class CardViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    fun saveChosenDesignToEditor(
+        optionToSave: GeminiService.CardDesignOption,
+        name: String,
+        companyName: String,
+        jobTitle: String,
+        phoneNumber: String,
+        email: String,
+        website: String,
+        address: String,
+        logoUri: String?,
+        photoUri: String?
+    ) {
+        val fieldsStr = StringBuilder("[")
+        optionToSave.visibleFields.forEachIndexed { idx, field ->
+            fieldsStr.append("\"").append(field).append("\"")
+            if (idx < optionToSave.visibleFields.size - 1) fieldsStr.append(",")
+        }
+        fieldsStr.append("]")
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Incorporate custom images if present
+                val elements = mutableListOf<DesignElement>()
+                if (!logoUri.isNullOrEmpty()) {
+                    elements.add(
+                        DesignElement(
+                            id = "custom_logo_element",
+                            type = "ICON",
+                            name = "Uploaded Logo",
+                            content = logoUri,
+                            x = 25f,
+                            y = 100f,
+                            scale = 1.0f
+                        )
+                    )
+                }
+                if (!photoUri.isNullOrEmpty()) {
+                    elements.add(
+                        DesignElement(
+                            id = "custom_photo_element",
+                            type = "STICKER",
+                            name = "Profile Photo",
+                            content = photoUri,
+                            x = 180f,
+                            y = 30f,
+                            scale = 1.0f
+                        )
+                    )
+                }
+
+                val designElementsJsonStr = if (elements.isNotEmpty()) {
+                    val arrStr = StringBuilder("[")
+                    elements.forEachIndexed { index, designElement ->
+                        arrStr.append("{")
+                            .append("\"id\":\"").append(designElement.id).append("\",")
+                            .append("\"type\":\"").append(designElement.type).append("\",")
+                            .append("\"name\":\"").append(designElement.name).append("\",")
+                            .append("\"content\":\"").append(designElement.content).append("\",")
+                            .append("\"x\":").append(designElement.x).append(",")
+                            .append("\"y\":").append(designElement.y).append(",")
+                            .append("\"color\":\"").append(designElement.color).append("\",")
+                            .append("\"fontSize\":").append(designElement.fontSize).append(",")
+                            .append("\"isBold\":").append(designElement.isBold).append(",")
+                            .append("\"isItalic\":").append(designElement.isItalic).append(",")
+                            .append("\"isUnderline\":").append(designElement.isUnderline).append(",")
+                            .append("\"rotation\":").append(designElement.rotation).append(",")
+                            .append("\"scale\":").append(designElement.scale).append(",")
+                            .append("\"zIndex\":").append(designElement.zIndex)
+                            .append("}")
+                        if (index < elements.size - 1) arrStr.append(",")
+                    }
+                    arrStr.append("]")
+                    arrStr.toString()
+                } else {
+                    "[]"
+                }
+
+                val newAICard = UserCard(
+                    cardName = "$name\'s AI Custom Card",
+                    templateId = "ai_template",
+                    themeName = optionToSave.themeName,
+                    fullName = name,
+                    companyName = companyName,
+                    jobTitle = jobTitle,
+                    mobileNumber = phoneNumber,
+                    email = email,
+                    website = website,
+                    address = address,
+                    backgroundColor = optionToSave.backgroundColor,
+                    gradientEndColor = optionToSave.gradientEndColor,
+                    qrCodeColor = optionToSave.primaryColor,
+                    fontStyle = optionToSave.fontStyle,
+                    qrCodeX = optionToSave.qrX,
+                    qrCodeY = optionToSave.qrY,
+                    qrCodeVisible = optionToSave.qrCodeVisible,
+                    visibleFieldsJson = fieldsStr.toString(),
+                    designElementsJson = designElementsJsonStr,
+                    lastUpdated = System.currentTimeMillis()
+                )
+
+                val insertedId = repository.saveCard(newAICard)
+                val cardWithId = newAICard.copy(id = insertedId.toInt())
+                _editingCard.value = cardWithId
+                
+                // Set the current editor active card immediately
+                _editingCard.value = cardWithId
+            } catch (e: Exception) {
+                android.util.Log.e("CardViewModel", "Failed saving card option", e)
+            }
+        }
+    }
+
     fun resetAIStates() {
         _aiSuccess.value = false
         _aiError.value = null
+        _aiOptions.value = emptyList()
     }
 }

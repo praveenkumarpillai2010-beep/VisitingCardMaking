@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -37,6 +39,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,7 +91,8 @@ fun EditorScreens(
     // Active state tracker for designer toolbox selection
     var activeToolTab by remember { mutableStateOf("FIELDS") }
     var selectedElementKey by remember { mutableStateOf("fullName") }
-    var editorZoomFactor by remember { mutableStateOf(1.0f) }
+    // Initialize zoom factor to -1f representing automatic "Fit to Screen" mode
+    var editorZoomFactor by remember { mutableStateOf(-1.0f) }
 
     // Dialog trigger states
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -146,17 +150,36 @@ fun EditorScreens(
         if (isFullscreenMode) {
             // --- FULLSCREEN EDITING MODE ---
             // Maximize screen space entirely for the card preview canvas, hiding all distracting elements.
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .background(Color(0xFF0F111A)),
                 contentAlignment = Alignment.Center
             ) {
+                // Measure fit zoom factor in fullscreen
+                val fitZoomFactor = remember(maxWidth, maxHeight) {
+                    val padWidth = (maxWidth - 48.dp).coerceAtLeast(10.dp)
+                    val padHeight = (maxHeight - 48.dp).coerceAtLeast(10.dp)
+                    val horizontalZoom = padWidth.value / 400f
+                    val verticalZoom = padHeight.value / 240f
+                    minOf(horizontalZoom, verticalZoom).coerceIn(0.2f, 2.5f)
+                }
+
+                val currentZoom = if (editorZoomFactor == -1.0f) fitZoomFactor else editorZoomFactor
+
                 // Interactive Scrollable Canvas with Smooth Zooms and Drag-Drops
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, _, zoom, _ ->
+                                if (zoom != 1.0f) {
+                                    val baseZoom = if (editorZoomFactor == -1.0f) fitZoomFactor else editorZoomFactor
+                                    editorZoomFactor = (baseZoom * zoom).coerceIn(0.2f, 2.5f)
+                                }
+                            }
+                        }
                         .verticalScroll(rememberScrollState())
                         .horizontalScroll(rememberScrollState()),
                     contentAlignment = Alignment.Center
@@ -164,15 +187,15 @@ fun EditorScreens(
                     Box(
                         modifier = Modifier
                             .padding(24.dp)
-                            .width((400 * editorZoomFactor).dp)
-                            .height((240 * editorZoomFactor).dp),
+                            .width((400 * currentZoom).dp)
+                            .height((240 * currentZoom).dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
                                 .width(400.dp)
                                 .height(240.dp)
-                                .scale(editorZoomFactor)
+                                .scale(currentZoom)
                         ) {
                             WYSIWYGCardCanvas(
                                 card = activeCard,
@@ -301,11 +324,11 @@ fun EditorScreens(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                         ) {
                             // Zoom buttons
-                            IconButton(onClick = { editorZoomFactor = (editorZoomFactor - 0.15f).coerceIn(0.5f, 2.5f) }, modifier = Modifier.size(24.dp)) {
+                            IconButton(onClick = { editorZoomFactor = (currentZoom - 0.15f).coerceIn(0.2f, 2.5f) }, modifier = Modifier.size(24.dp)) {
                                 Text("-", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                             }
-                            Text("${(editorZoomFactor * 100).toInt()}%", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            IconButton(onClick = { editorZoomFactor = (editorZoomFactor + 0.15f).coerceIn(0.5f, 2.5f) }, modifier = Modifier.size(24.dp)) {
+                            Text("${(currentZoom * 100).toInt()}%${if (editorZoomFactor == -1.0f) " (Fit)" else ""}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            IconButton(onClick = { editorZoomFactor = (currentZoom + 0.15f).coerceIn(0.2f, 2.5f) }, modifier = Modifier.size(24.dp)) {
                                 Icon(Icons.Default.Add, contentDescription = "Zoom In", tint = Color.White, modifier = Modifier.size(12.dp))
                             }
                             
@@ -330,642 +353,358 @@ fun EditorScreens(
                 }
             }
         } else {
-            // --- STANDARD MODE (COMPACT, COLLAPSIBLE CONTROLS) ---
-
-            // 1. COLLAPSIBLE TOP HEADER SECTION
-            if (isHeaderCollapsed) {
-                // High-efficiency compact 1-line strip saving precious vertical space
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF0F111A))
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = { onNavigate(ActiveScreen.DASHBOARD) },
-                            modifier = Modifier.size(32.dp).background(Color(0xFF131722), CircleShape)
-                        ) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", modifier = Modifier.size(16.dp), tint = Color.White)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            activeCard.cardName,
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            modifier = Modifier.widthIn(max = 140.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Rename",
-                            modifier = Modifier.size(12.dp).clickable {
-                                renameInput = activeCard.cardName
-                                showRenameDialog = true
-                            },
-                            tint = Color(0xFFD4AF37)
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        // Quick Export Shortcut
-                        IconButton(
-                            onClick = { showExportSheet = true },
-                            modifier = Modifier.size(32.dp).background(Color(0xFFD4AF37), CircleShape)
-                        ) {
-                            Icon(Icons.Default.Share, contentDescription = "Export Card", modifier = Modifier.size(14.dp), tint = Color.Black)
-                        }
-                        
-                        // Fullscreen Toggle
-                        IconButton(
-                            onClick = { isFullscreenMode = true },
-                            modifier = Modifier.size(32.dp).background(Color(0xFF131722), CircleShape)
-                        ) {
-                            FullscreenIcon(tint = Color(0xFF00FFCC))
-                        }
-
-                        // Expand Header Button
-                        IconButton(
-                            onClick = { isHeaderCollapsed = false },
-                            modifier = Modifier.size(32.dp).background(Color(0xFF131722), CircleShape)
-                        ) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Expand Header", modifier = Modifier.size(16.dp), tint = Color(0xFFD4AF37))
-                        }
-                    }
-                }
-            } else {
-                // Expanded fully-functional Topbar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = { onNavigate(ActiveScreen.DASHBOARD) },
-                            modifier = Modifier.background(Color(0xFF131722), CircleShape)
-                        ) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", modifier = Modifier.size(24.dp), tint = Color.White)
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.clickable {
-                            renameInput = activeCard.cardName
-                            showRenameDialog = true
-                        }) {
-                            Text(
-                                activeCard.cardName,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                modifier = Modifier.widthIn(max = 120.dp)
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Rename template", color = Color(0xFFD4AF37), fontSize = 11.sp)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(10.dp), tint = Color(0xFFD4AF37))
-                            }
-                        }
-                    }
-
-                    // Undo, Redo, Fullscreen, Collapse actions
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        IconButton(
-                            onClick = { viewModel.undo() },
-                            enabled = viewModel.hasUndo(),
-                            modifier = Modifier.background(if (viewModel.hasUndo()) Color(0xFF131722) else Color.Transparent, CircleShape)
-                        ) {
-                            Icon(
-                                Icons.Default.ArrowBack,
-                                contentDescription = "Undo Action",
-                                modifier = Modifier.size(20.dp),
-                                tint = if (viewModel.hasUndo()) Color(0xFF00FFCC) else Color.DarkGray
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { viewModel.redo() },
-                            enabled = viewModel.hasRedo(),
-                            modifier = Modifier.background(if (viewModel.hasRedo()) Color(0xFF131722) else Color.Transparent, CircleShape)
-                        ) {
-                            Icon(
-                                Icons.Default.ArrowForward,
-                                contentDescription = "Redo Action",
-                                modifier = Modifier.size(20.dp),
-                                tint = if (viewModel.hasRedo()) Color(0xFF00FFCC) else Color.DarkGray
-                            )
-                        }
-
-                        // Fullscreen Icon Trigger
-                        IconButton(
-                            onClick = { isFullscreenMode = true },
-                            modifier = Modifier.background(Color(0xFF131722), CircleShape)
-                        ) {
-                            FullscreenIcon(tint = Color(0xFF00FFCC))
-                        }
-
-                        // Mini / Collapse Header Button
-                        IconButton(
-                            onClick = { isHeaderCollapsed = true },
-                            modifier = Modifier.background(Color(0xFF131722), CircleShape)
-                        ) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Collapse Header", modifier = Modifier.size(18.dp), tint = Color(0xFFD4AF37))
-                        }
-
-                        Button(
-                            onClick = { showExportSheet = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Black)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Export", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            // 2. SCROLLABLE CARD PREVIEW BOX WITH ADAPTIVE HEIGHT (Based on Resizing bottom panel)
-            val previewWeight = when (bottomPanelExpandedLevel) {
-                0 -> 1.0f  // HUD/Collapsed Tool panels -> Card Canvas gets ALL screen space
-                1 -> 0.65f // Compact panel -> Card Canvas gets 65% height
-                2 -> 0.48f // Half/Standard panel -> Card Canvas gets 48% height
-                3 -> 0.32f // Tall panel -> Card Canvas gets 32% height
-                else -> 0.48f
-            }
-
-            Box(
+            // --- STANDARD SCREEN (COMPACT & FULLY RESPONSIVE ADAPTIVE LAYOUT) ---
+            BoxWithConstraints(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(previewWeight)
-                    .background(Color(0xFF0F111A))
-                    .border(BorderStroke(1.dp, Color(0xFF1E2433))),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .background(Color(0xFF07080C))
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .horizontalScroll(rememberScrollState()),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(24.dp)
-                            .width((400 * editorZoomFactor).dp)
-                            .height((240 * editorZoomFactor).dp),
-                        contentAlignment = Alignment.Center
+                // Determine layout direction based on available width/height (landscape/wide vs portrait/tall)
+                val isLandscape = maxWidth > maxHeight || maxWidth >= 600.dp
+
+                if (isLandscape) {
+                    // --- LANDSCAPE / TABLET LAYOUT ---
+                    Row(
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Box(
+                        // Left Pane: Toolbar and Card Preview
+                        Column(
                             modifier = Modifier
-                                .width(400.dp)
-                                .height(240.dp)
-                                .scale(editorZoomFactor)
+                                .weight(1.2f)
+                                .fillMaxHeight()
+                                .drawBehind {
+                                    val strokeWidth = 1.dp.toPx()
+                                    val x = size.width - strokeWidth / 2
+                                    drawLine(
+                                        color = Color(0xFF1E2433),
+                                        start = androidx.compose.ui.geometry.Offset(x, 0f),
+                                        end = androidx.compose.ui.geometry.Offset(x, size.height),
+                                        strokeWidth = strokeWidth
+                                    )
+                                }
                         ) {
-                            WYSIWYGCardCanvas(
-                                card = activeCard,
-                                selectedKey = selectedElementKey,
-                                onSelectKey = { selectedElementKey = it },
-                                viewModel = viewModel
+                            // Uniform compact TopBar
+                            CompactTopBar(
+                                activeCard = activeCard,
+                                viewModel = viewModel,
+                                onNavigate = onNavigate,
+                                onRenameClick = {
+                                    renameInput = activeCard.cardName
+                                    showRenameDialog = true
+                                },
+                                onExportClick = { showExportSheet = true },
+                                onFullscreenClick = { isFullscreenMode = true }
                             )
-                        }
-                    }
-                }
 
-                // Floating Zoom controller panel overlay
-                Surface(
-                    color = Color(0xFF10121A).copy(0.85f),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, Color(0xFF222B3A)),
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                    ) {
-                        IconButton(
-                            onClick = { editorZoomFactor = (editorZoomFactor - 0.15f).coerceIn(0.5f, 2.5f) },
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Text("-", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                        }
-                        Text(
-                            "${(editorZoomFactor * 100).toInt()}%",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        IconButton(
-                            onClick = { editorZoomFactor = (editorZoomFactor + 0.15f).coerceIn(0.5f, 2.5f) },
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Zoom In", tint = Color.White, modifier = Modifier.size(16.dp))
-                        }
-                        Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .height(16.dp)
-                                .background(Color.Gray)
-                        )
-                        TextButton(
-                            onClick = { editorZoomFactor = 1.0f },
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text("Reset", color = Color(0xFF00FFCC), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            // 3. HORIZONTAL LAYER SELECTOR SHORTCUTS ROW
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF0F111A))
-                    .border(BorderStroke(1.dp, Color(0xFF131722)))
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.List, contentDescription = "Layers List", tint = Color.Gray, modifier = Modifier.size(16.dp))
-                nativeLayerTitles.forEach { (key, title) ->
-                    val isVisible = key == "qrCode" || visibleFields.contains(key)
-                    if (isVisible) {
-                        val isSelected = selectedElementKey == key
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = if (isSelected) Color(0xFFD4AF37) else Color(0xFF1E2433).copy(0.6f),
-                            border = BorderStroke(1.dp, if (isSelected) Color.White else Color(0xFF222B3A)),
-                            modifier = Modifier.clickable { selectedElementKey = key }
-                        ) {
-                            Text(
-                                text = title,
-                                color = if (isSelected) Color.Black else Color.White,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Custom design element layers rendered safely without exceptions
-                customLayersList.forEach { (key, type) ->
-                    val isSelected = selectedElementKey == key
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isSelected) Color(0xFF00FFCC) else Color(0xFF1E2433).copy(0.6f),
-                        border = BorderStroke(1.dp, if (isSelected) Color.White else Color(0xFF222B3A)),
-                        modifier = Modifier.clickable { selectedElementKey = key }
-                    ) {
-                        Text(
-                            text = "Layer: $type",
-                            color = if (isSelected) Color.Black else Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            // 4. LAYER MANIPULATORS D-PAD CONTROLLER & ROTATION SCALE HUD (COLLAPSIBLE)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF10121A))
-                    .border(BorderStroke(1.dp, Color(0xFF1E2433)))
-                    .padding(horizontal = 14.dp, vertical = if (isDpadCollapsed) 4.dp else 8.dp)
-            ) {
-                if (isDpadCollapsed) {
-                    // Small, ultra-compact spatial row saving space
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "NUDGE LAYER",
-                                color = Color(0xFFD4AF37),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "[${selectedElementKey.uppercase()}]",
-                                color = Color.White,
-                                fontSize = 10.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // High precision fast nudge buttons
-                            IconButton(onClick = { updateElementPosition(activeCard, selectedElementKey, -4f, 0f, viewModel) }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "Left", tint = Color.LightGray, modifier = Modifier.size(14.dp))
-                            }
-                            IconButton(onClick = { updateElementPosition(activeCard, selectedElementKey, 0f, -4f, viewModel) }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Up", tint = Color.LightGray, modifier = Modifier.size(14.dp))
-                            }
-                            IconButton(onClick = { updateElementPosition(activeCard, selectedElementKey, 0f, 4f, viewModel) }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Down", tint = Color.LightGray, modifier = Modifier.size(14.dp))
-                            }
-                            IconButton(onClick = { updateElementPosition(activeCard, selectedElementKey, 4f, 0f, viewModel) }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.ArrowForward, contentDescription = "Right", tint = Color.LightGray, modifier = Modifier.size(14.dp))
-                            }
-
-                            Box(modifier = Modifier.width(1.dp).height(16.dp).background(Color.DarkGray))
-
-                            // Expand Sliders Label click
-                            TextButton(
-                                onClick = { isDpadCollapsed = false },
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                modifier = Modifier.height(24.dp)
+                            // Card Preview Box
+                            BoxWithConstraints(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .background(Color(0xFF0F111A)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text("+ Rotate/Scale sliders", color = Color(0xFF00FFCC), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                val fitZoomFactor = remember(maxWidth, maxHeight) {
+                                    val padWidth = (maxWidth - 32.dp).coerceAtLeast(10.dp)
+                                    val padHeight = (maxHeight - 32.dp).coerceAtLeast(10.dp)
+                                    val horizontalZoom = padWidth.value / 400f
+                                    val verticalZoom = padHeight.value / 240f
+                                    minOf(horizontalZoom, verticalZoom).coerceIn(0.2f, 2.5f)
+                                }
+
+                                val currentZoom = if (editorZoomFactor == -1.0f) fitZoomFactor else editorZoomFactor
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .pointerInput(Unit) {
+                                            detectTransformGestures { _, _, zoom, _ ->
+                                                if (zoom != 1.0f) {
+                                                    val baseZoom = if (editorZoomFactor == -1.0f) fitZoomFactor else editorZoomFactor
+                                                    editorZoomFactor = (baseZoom * zoom).coerceIn(0.2f, 2.5f)
+                                                }
+                                            }
+                                        }
+                                        .verticalScroll(rememberScrollState())
+                                        .horizontalScroll(rememberScrollState()),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .width((400 * currentZoom).dp)
+                                            .height((240 * currentZoom).dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(400.dp)
+                                                .height(240.dp)
+                                                .scale(currentZoom)
+                                        ) {
+                                            WYSIWYGCardCanvas(
+                                                card = activeCard,
+                                                selectedKey = selectedElementKey,
+                                                onSelectKey = { selectedElementKey = it },
+                                                viewModel = viewModel
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Float Zoom Overlay
+                                CompactZoomController(
+                                    currentZoom = currentZoom,
+                                    isFit = editorZoomFactor == -1.0f,
+                                    onZoomOut = { editorZoomFactor = (currentZoom - 0.15f).coerceIn(0.2f, 2.5f) },
+                                    onZoomIn = { editorZoomFactor = (currentZoom + 0.15f).coerceIn(0.2f, 2.5f) },
+                                    onReset = { editorZoomFactor = -1.0f },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 8.dp)
+                                )
+                            }
+                        }
+
+                        // Right Pane: Active Layer shortcuts, Toolbox tabs & scrollable toolbox panels
+                        Column(
+                            modifier = Modifier
+                                .weight(1.0f)
+                                .fillMaxHeight()
+                                .background(Color(0xFF131722))
+                        ) {
+                            // Layer selection shortcuts row at top of panel
+                            LayerShortcutsRow(
+                                nativeLayerTitles = nativeLayerTitles,
+                                visibleFields = visibleFields,
+                                customLayersList = customLayersList,
+                                selectedElementKey = selectedElementKey,
+                                onLayerSelect = { selectedElementKey = it }
+                            )
+
+                            // Unified Collapsible D-pad / Spatial Sliders
+                            DpadNudgeSlidersPanel(
+                                selectedElementKey = selectedElementKey,
+                                activeCard = activeCard,
+                                viewModel = viewModel,
+                                isDpadCollapsed = isDpadCollapsed,
+                                onDpadCollapseToggle = { isDpadCollapsed = it }
+                            )
+
+                            // Toolbox tabs select row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF1A1F2C))
+                                    .border(BorderStroke(1.dp, Color(0xFF2E3547))),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                ToolboxTabButton("Profile Fields", activeToolTab == "FIELDS") { activeToolTab = "FIELDS" }
+                                ToolboxTabButton("Styling & Font", activeToolTab == "STYLING") { activeToolTab = "STYLING" }
+                                ToolboxTabButton("QR Manager", activeToolTab == "QR_CODE") { activeToolTab = "QR_CODE" }
+                                ToolboxTabButton("Add Custom", activeToolTab == "CUSTOM_LAYERS") { activeToolTab = "CUSTOM_LAYERS" }
+                            }
+
+                            // Active panel content region filling the remaining right-pane height
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .background(Color(0xFF0A0C16))
+                            ) {
+                                when (activeToolTab) {
+                                    "FIELDS" -> EditorFieldsPanel(activeCard, viewModel)
+                                    "STYLING" -> EditorStylingPanel(activeCard, viewModel)
+                                    "QR_CODE" -> EditorQRPanel(activeCard, viewModel, onNavigate)
+                                    "CUSTOM_LAYERS" -> EditorCustomLayersPanel(activeCard, viewModel, onNavigate)
+                                }
                             }
                         }
                     }
                 } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    // --- PORTRAIT LAYOUT (PHONES) ---
+                    Column(
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Column {
-                            Text(
-                                text = "ACTIVE LAYER: ${selectedElementKey.uppercase()}",
-                                color = Color(0xFFD4AF37),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Snap-to-Grid: " + (if (activeCard.snapToGrid) "Active (10px)" else "Inactive (Free format)"),
-                                color = Color.Gray,
-                                fontSize = 9.sp
-                            )
+                        // Compact TopBar
+                        CompactTopBar(
+                            activeCard = activeCard,
+                            viewModel = viewModel,
+                            onNavigate = onNavigate,
+                            onRenameClick = {
+                                renameInput = activeCard.cardName
+                                showRenameDialog = true
+                            },
+                            onExportClick = { showExportSheet = true },
+                            onFullscreenClick = { isFullscreenMode = true }
+                        )
+
+                        // Card Preview Viewport
+                        val previewWeight = when (bottomPanelExpandedLevel) {
+                            0 -> 1.0f  // HUD/Collapsed Tool panels -> Card Canvas gets ALL screen space
+                            1 -> 0.62f // Compact panel -> Card Canvas gets 62% height
+                            2 -> 0.46f // Half/Standard panel -> Card Canvas gets 46% height
+                            3 -> 0.30f // Tall panel -> Card Canvas gets 30% height
+                            else -> 0.46f
                         }
 
-                        // D-Pad and Spatial Controls
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        BoxWithConstraints(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(previewWeight)
+                                .background(Color(0xFF0F111A))
+                                .border(BorderStroke(1.dp, Color(0xFF1E2433))),
+                            contentAlignment = Alignment.Center
                         ) {
-                            // Position Increments/Decrements Nudge Controls
-                            IconButton(onClick = { updateElementPosition(activeCard, selectedElementKey, -4f, 0f, viewModel) }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "Left", tint = Color.White, modifier = Modifier.size(14.dp))
+                            val fitZoomFactor = remember(maxWidth, maxHeight) {
+                                val padWidth = (maxWidth - 32.dp).coerceAtLeast(10.dp)
+                                val padHeight = (maxHeight - 32.dp).coerceAtLeast(10.dp)
+                                val horizontalZoom = padWidth.value / 400f
+                                val verticalZoom = padHeight.value / 240f
+                                minOf(horizontalZoom, verticalZoom).coerceIn(0.2f, 2.5f)
                             }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                IconButton(onClick = { updateElementPosition(activeCard, selectedElementKey, 0f, -4f, viewModel) }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Up", tint = Color.White, modifier = Modifier.size(14.dp))
-                                }
-                                IconButton(onClick = { updateElementPosition(activeCard, selectedElementKey, 0f, 4f, viewModel) }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Down", tint = Color.White, modifier = Modifier.size(14.dp))
-                                }
-                            }
-                            IconButton(onClick = { updateElementPosition(activeCard, selectedElementKey, 4f, 0f, viewModel) }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.ArrowForward, contentDescription = "Right", tint = Color.White, modifier = Modifier.size(14.dp))
-                            }
+
+                            val currentZoom = if (editorZoomFactor == -1.0f) fitZoomFactor else editorZoomFactor
 
                             Box(
                                 modifier = Modifier
-                                    .width(1.dp)
-                                    .height(28.dp)
-                                    .background(Color.DarkGray)
-                            )
-
-                            // LAYER REORDERING controls (Bring Forward / Send Backward)
-                            IconButton(
-                                onClick = { updateElementZIndex(activeCard, selectedElementKey, true, viewModel) },
-                                modifier = Modifier
-                                    .background(Color(0xFF1E2433), RoundedCornerShape(4.dp))
-                                    .size(28.dp)
+                                    .fillMaxSize()
+                                    .pointerInput(Unit) {
+                                        detectTransformGestures { _, _, zoom, _ ->
+                                            if (zoom != 1.0f) {
+                                                val baseZoom = if (editorZoomFactor == -1.0f) fitZoomFactor else editorZoomFactor
+                                                editorZoomFactor = (baseZoom * zoom).coerceIn(0.2f, 2.5f)
+                                            }
+                                        }
+                                    }
+                                    .verticalScroll(rememberScrollState())
+                                    .horizontalScroll(rememberScrollState()),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Bring Forward", tint = Color(0xFF00FFCC), modifier = Modifier.size(16.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .padding(16.dp)
+                                        .width((400 * currentZoom).dp)
+                                        .height((240 * currentZoom).dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .width(400.dp)
+                                            .height(240.dp)
+                                            .scale(currentZoom)
+                                    ) {
+                                        WYSIWYGCardCanvas(
+                                            card = activeCard,
+                                            selectedKey = selectedElementKey,
+                                            onSelectKey = { selectedElementKey = it },
+                                            viewModel = viewModel
+                                        )
+                                    }
+                                }
                             }
-                            IconButton(
-                                onClick = { updateElementZIndex(activeCard, selectedElementKey, false, viewModel) },
+
+                            // Float Zoom Overlay
+                            CompactZoomController(
+                                currentZoom = currentZoom,
+                                isFit = editorZoomFactor == -1.0f,
+                                onZoomOut = { editorZoomFactor = (currentZoom - 0.15f).coerceIn(0.2f, 2.5f) },
+                                onZoomIn = { editorZoomFactor = (currentZoom + 0.15f).coerceIn(0.2f, 2.5f) },
+                                onReset = { editorZoomFactor = -1.0f },
                                 modifier = Modifier
-                                    .background(Color(0xFF1E2433), RoundedCornerShape(4.dp))
-                                    .size(28.dp)
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 8.dp)
+                            )
+                        }
+
+                        // Layer select shortcuts bar
+                        LayerShortcutsRow(
+                            nativeLayerTitles = nativeLayerTitles,
+                            visibleFields = visibleFields,
+                            customLayersList = customLayersList,
+                            selectedElementKey = selectedElementKey,
+                            onLayerSelect = { selectedElementKey = it }
+                        )
+
+                        // D-pad nudge sliders
+                        DpadNudgeSlidersPanel(
+                            selectedElementKey = selectedElementKey,
+                            activeCard = activeCard,
+                            viewModel = viewModel,
+                            isDpadCollapsed = isDpadCollapsed,
+                            onDpadCollapseToggle = { isDpadCollapsed = it }
+                        )
+
+                        // Height Resize control Header
+                        ToolboxHeightSelectorHeader(
+                            bottomPanelExpandedLevel = bottomPanelExpandedLevel,
+                            onHeightChange = { bottomPanelExpandedLevel = it }
+                        )
+
+                        // Tab headers and scrollable content panel
+                        if (bottomPanelExpandedLevel > 0) {
+                            val panelWeight = when (bottomPanelExpandedLevel) {
+                                1 -> 0.38f // COMPACT
+                                2 -> 0.54f // NORMAL
+                                3 -> 0.70f // TALL
+                                else -> 0.54f
+                            }
+
+                            // Toolbox tabs select row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF131722))
+                                    .border(BorderStroke(1.dp, Color(0xFF1E2433))),
+                                horizontalArrangement = Arrangement.SpaceAround
                             ) {
-                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Send Backward", tint = Color(0xFFFF5E7E), modifier = Modifier.size(16.dp))
+                                ToolboxTabButton("Profile Fields", activeToolTab == "FIELDS") { activeToolTab = "FIELDS" }
+                                ToolboxTabButton("Styling & Font", activeToolTab == "STYLING") { activeToolTab = "STYLING" }
+                                ToolboxTabButton("QR Manager", activeToolTab == "QR_CODE") { activeToolTab = "QR_CODE" }
+                                ToolboxTabButton("Add Custom", activeToolTab == "CUSTOM_LAYERS") { activeToolTab = "CUSTOM_LAYERS" }
                             }
 
-                            // Snap to Grid Check action Box
-                            Icon(
-                                imageVector = if (activeCard.snapToGrid) Icons.Default.CheckCircle else Icons.Default.Info,
-                                contentDescription = "Snap toggle",
-                                tint = if (activeCard.snapToGrid) Color(0xFF00FFCC) else Color.Gray,
+                            // Active panel content region
+                            Box(
                                 modifier = Modifier
-                                    .size(20.dp)
-                                    .clickable { viewModel.applyCardEdit(activeCard.copy(snapToGrid = !activeCard.snapToGrid)) }
-                            )
-
-                            Box(modifier = Modifier.width(1.dp).height(28.dp).background(Color.DarkGray))
-
-                            // Collapse spatial controls
-                            IconButton(onClick = { isDpadCollapsed = true }, modifier = Modifier.size(24.dp)) {
-                                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Collapse Nudge", tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                                    .fillMaxWidth()
+                                    .weight(panelWeight)
+                                    .background(Color(0xFF0A0C16))
+                            ) {
+                                when (activeToolTab) {
+                                    "FIELDS" -> EditorFieldsPanel(activeCard, viewModel)
+                                    "STYLING" -> EditorStylingPanel(activeCard, viewModel)
+                                    "QR_CODE" -> EditorQRPanel(activeCard, viewModel, onNavigate)
+                                    "CUSTOM_LAYERS" -> EditorCustomLayersPanel(activeCard, viewModel, onNavigate)
+                                }
+                            }
+                        } else {
+                            // Toolbox fully collapsed restore indicator
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF131722))
+                                    .clickable { bottomPanelExpandedLevel = 2 } // Restore to standard size
+                                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowUp,
+                                    contentDescription = "Restore Panel",
+                                    tint = Color(0xFF00FFCC),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Editor Toolbox is Collapsed — Click to Restore Controls",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
-
-                    // Scale and Rotation slider control row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // Rotation Control
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.Gray, modifier = Modifier.size(12.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Rotate", color = Color.Gray, fontSize = 9.sp)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            var rotDegrees by remember(selectedElementKey) { mutableStateOf(getElementRotation(activeCard, selectedElementKey)) }
-                            Slider(
-                                value = rotDegrees,
-                                onValueChange = {
-                                    rotDegrees = it
-                                    updateElementSpatial(activeCard, selectedElementKey, null, null, it, null, null, null, viewModel)
-                                },
-                                valueRange = -180f..180f,
-                                colors = SliderDefaults.colors(thumbColor = Color(0xFF00FFCC), activeTrackColor = Color(0xFF00FFCC)),
-                                modifier = Modifier.height(28.dp)
-                            )
-                        }
-
-                        // Scale / Size Font Control
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Star, contentDescription = "Scale", tint = Color.Gray, modifier = Modifier.size(12.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Scale", color = Color.Gray, fontSize = 9.sp)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            var elementScale by remember(selectedElementKey) { mutableStateOf(getElementScale(activeCard, selectedElementKey)) }
-                            Slider(
-                                value = elementScale,
-                                onValueChange = {
-                                    elementScale = it
-                                    updateElementSpatial(activeCard, selectedElementKey, null, null, null, it, null, null, viewModel)
-                                },
-                                valueRange = 0.5f..2.5f,
-                                colors = SliderDefaults.colors(thumbColor = Color(0xFFD4AF37), activeTrackColor = Color(0xFFD4AF37)),
-                                modifier = Modifier.height(28.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 5. RESIZABLE BOTTOM WORKSPACE CONTROLLER
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF1A1F2C))
-                    .border(BorderStroke(1.dp, Color(0xFF2E3547)))
-                    .padding(horizontal = 14.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Settings,
-                        contentDescription = "Resize Panel",
-                        tint = Color(0xFFD4AF37),
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        "EDITOR TOOLBOX PANEL",
-                        color = Color.LightGray,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Resizing Buttons
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text("Height:", color = Color.Gray, fontSize = 9.sp)
-                    Text(
-                        text = "HIDE",
-                        color = if (bottomPanelExpandedLevel == 0) Color(0xFF00FFCC) else Color.Gray,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clickable { bottomPanelExpandedLevel = 0 }
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
-                    Text(
-                        text = "COMPACT",
-                        color = if (bottomPanelExpandedLevel == 1) Color(0xFF00FFCC) else Color.Gray,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clickable { bottomPanelExpandedLevel = 1 }
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
-                    Text(
-                        text = "NORMAL",
-                        color = if (bottomPanelExpandedLevel == 2) Color(0xFF00FFCC) else Color.Gray,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clickable { bottomPanelExpandedLevel = 2 }
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
-                    Text(
-                        text = "TALL",
-                        color = if (bottomPanelExpandedLevel == 3) Color(0xFF00FFCC) else Color.Gray,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clickable { bottomPanelExpandedLevel = 3 }
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
-                }
-            }
-
-            // TOOLBOX TABS & ACTIVE PANEL CONTENT
-            if (bottomPanelExpandedLevel > 0) {
-                val panelWeight = when (bottomPanelExpandedLevel) {
-                    1 -> 0.35f // COMPACT
-                    2 -> 0.52f // HALF/STANDARD
-                    3 -> 0.68f // TALL
-                    else -> 0.52f
-                }
-
-                // Tabs definition
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF131722))
-                        .border(BorderStroke(1.dp, Color(0xFF1E2433))),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    ToolboxTabButton("Profile Fields", activeToolTab == "FIELDS") { 
-                        activeToolTab = "FIELDS" 
-                    }
-                    ToolboxTabButton("Styling & Font", activeToolTab == "STYLING") { 
-                        activeToolTab = "STYLING" 
-                    }
-                    ToolboxTabButton("QR Manager", activeToolTab == "QR_CODE") { 
-                        activeToolTab = "QR_CODE" 
-                    }
-                    ToolboxTabButton("Add Custom", activeToolTab == "CUSTOM_LAYERS") { 
-                        activeToolTab = "CUSTOM_LAYERS" 
-                    }
-                }
-
-                // Active Tool Panel Content
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(panelWeight)
-                        .background(Color(0xFF0A0C16))
-                ) {
-                    when (activeToolTab) {
-                        "FIELDS" -> EditorFieldsPanel(activeCard, viewModel)
-                        "STYLING" -> EditorStylingPanel(activeCard, viewModel)
-                        "QR_CODE" -> EditorQRPanel(activeCard, viewModel, onNavigate)
-                        "CUSTOM_LAYERS" -> EditorCustomLayersPanel(activeCard, viewModel, onNavigate)
-                    }
-                }
-            } else {
-                // When bottom panel is fully hidden to prioritize maximum preview space, show a clean restore bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF131722))
-                        .clickable { bottomPanelExpandedLevel = 2 }
-                        .padding(vertical = 12.dp, horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Restore Panel", tint = Color(0xFF00FFCC), modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Editor Toolbox is Collapsed — Click to Restore Controls", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1047,7 +786,13 @@ fun WYSIWYGCardCanvas(
     val context = LocalContext.current
     val density = LocalDensity.current.density
 
-    val cardBgStart = try { Color(android.graphics.Color.parseColor(card.backgroundColor)) } catch (e: Exception) { Color(0xFF10121A) }
+    val normalizedDensity = Density(
+        density = LocalDensity.current.density,
+        fontScale = 1.0f
+    )
+
+    CompositionLocalProvider(LocalDensity provides normalizedDensity) {
+        val cardBgStart = try { Color(android.graphics.Color.parseColor(card.backgroundColor)) } catch (e: Exception) { Color(0xFF10121A) }
     val cardBgEnd = try { Color(android.graphics.Color.parseColor(card.gradientEndColor)) } catch (e: Exception) { Color(0xFF1E2130) }
     val accentColor = try { Color(android.graphics.Color.parseColor(card.qrCodeColor)) } catch (e: Exception) { Color(0xFFD4AF37) }
 
@@ -1069,11 +814,22 @@ fun WYSIWYGCardCanvas(
             .background(
                 if (card.backgroundType == "GRADIENT") {
                     Brush.linearGradient(listOf(cardBgStart, cardBgEnd))
-                } else {
+                } else if (card.backgroundType == "SOLID") {
                     Brush.linearGradient(listOf(cardBgStart, cardBgStart))
+                } else {
+                    Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
                 }
             )
     ) {
+        if (card.backgroundType == "PATTERN" && !card.backgroundImage.isNullOrEmpty()) {
+            val bgPainter = coil.compose.rememberAsyncImagePainter(model = card.backgroundImage)
+            Image(
+                painter = bgPainter,
+                contentDescription = "Custom Background Pattern",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
         // Outer decorative frames and borders
         when (card.borderStyle) {
             "MINIMAL_GOLD" -> {
@@ -1465,7 +1221,7 @@ fun WYSIWYGCardCanvas(
                     .padding(start = 12.dp, bottom = 12.dp)
             )
         }
-    }
+    } }
 }
 
 // GENERIC MOVABLE CARD DRAG DETECTOR CONTAINER
@@ -1483,6 +1239,8 @@ fun BoxScope.WYSIWYGDraggableContainer(
     density: Float,
     content: @Composable () -> Unit
 ) {
+    val isLocked = card.lockedElements.split(",").contains(id)
+
     Box(
         modifier = Modifier
             .offset(x = initialX.dp, y = initialY.dp)
@@ -1491,13 +1249,13 @@ fun BoxScope.WYSIWYGDraggableContainer(
                 scaleX = scale,
                 scaleY = scale
             )
-            .pointerInput(id) {
-                detectDragGestures(
-                    onDragStart = { onSelect() },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        val rawNewX = initialX + dragAmount.x / density
-                        val rawNewY = initialY + dragAmount.y / density
+            .pointerInput(id, isLocked) {
+                if (!isLocked) {
+                    detectTransformGestures { centroid, pan, zoom, rotationChange ->
+                        onSelect()
+                        
+                        val rawNewX = initialX + pan.x / density
+                        val rawNewY = initialY + pan.y / density
                         
                         // Enforce 10px snapping intervals or free move
                         val newX = if (card.snapToGrid) {
@@ -1507,13 +1265,18 @@ fun BoxScope.WYSIWYGDraggableContainer(
                             Math.round(rawNewY / 10f) * 10f
                         } else rawNewY
 
-                        updateElementSpatial(card, id, newX, newY, null, null, null, null, viewModel)
+                        val newScale = (scale * zoom).coerceIn(0.40f, 2.80f)
+                        val newRot = (rotation + rotationChange) % 360f
+
+                        updateElementSpatial(card, id, newX, newY, newRot, newScale, null, null, viewModel)
                     }
-                )
+                }
             }
             .border(
                 1.dp,
-                if (selected) Color(0xFFD4AF37) else Color.Transparent,
+                if (selected) {
+                    if (isLocked) Color(0xFFFF5252) else Color(0xFFD4AF37)
+                } else Color.Transparent,
                 RoundedCornerShape(4.dp)
             )
             .clickable { onSelect() }
@@ -1522,8 +1285,21 @@ fun BoxScope.WYSIWYGDraggableContainer(
     ) {
         content()
 
-        // Double Click/Tap resizing corner handle at bottom right
-        if (selected) {
+        if (isLocked && selected) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = "Locked",
+                tint = Color(0xFFFF5252),
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(Color.Black.copy(0.7f), CircleShape)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-4).dp)
+            )
+        }
+
+        // Resizing corner handle at bottom right
+        if (selected && !isLocked) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -1899,6 +1675,28 @@ fun FieldEditRow(
 // 2. TOOL PANEL - BACKGROUND & THEME COLOR STYLINGS
 @Composable
 fun EditorStylingPanel(card: UserCard, viewModel: CardViewModel) {
+    val context = LocalContext.current
+    val isPremium by viewModel.isUserPremium.collectAsState()
+    val bgLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val count = viewModel.prefs.customBackgroundsUploadedCount
+            if (!isPremium && count >= 5) {
+                Toast.makeText(context, "Custom background limit reached (5/5). Please upgrade to Premium!", Toast.LENGTH_LONG).show()
+            } else {
+                if (!isPremium) {
+                    viewModel.prefs.customBackgroundsUploadedCount = count + 1
+                }
+                viewModel.applyCardEdit(card.copy(
+                    backgroundType = "PATTERN",
+                    backgroundImage = uri.toString()
+                ))
+                Toast.makeText(context, if (isPremium) "Premium custom background applied!" else "Custom background applied (${count + 1}/5)!", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     val presetsColors = listOf("#10121A", "#0B132B", "#0C2322", "#131722", "#28293F", "#1D1D2C", "#141518", "#121212")
     val accentsColors = listOf("#D4AF37", "#00FFCC", "#FF5E7E", "#5BC0BE", "#CBB26A", "#48CAE4", "#FF8C00", "#FFFFFF")
 
@@ -2024,6 +1822,44 @@ fun EditorStylingPanel(card: UserCard, viewModel: CardViewModel) {
                     )
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("Custom Background Image", color = Color.LightGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = { bgLauncher.launch("image/*") },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Upload Photo", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+            
+            if (card.backgroundType == "PATTERN") {
+                Button(
+                    onClick = { viewModel.applyCardEdit(card.copy(backgroundType = "GRADIENT")) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Clear Image", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        if (!isPremium) {
+            val uploads = viewModel.prefs.customBackgroundsUploadedCount
+            Text(
+                text = "Custom Background Storage Used: $uploads / 5 custom backgrounds.",
+                color = if (uploads >= 5) Color.Red else Color.Gray,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -2816,5 +2652,588 @@ fun FullscreenExitIcon(tint: Color = Color.White, modifier: Modifier = Modifier)
         // Bottom Right pointing inward
         drawRect(color = tint, topLeft = androidx.compose.ui.geometry.Offset(width - offset - cornerLen, height - offset - cornerLen), size = androidx.compose.ui.geometry.Size(cornerLen, strokeWidth))
         drawRect(color = tint, topLeft = androidx.compose.ui.geometry.Offset(width - offset - strokeWidth, height - offset - cornerLen), size = androidx.compose.ui.geometry.Size(strokeWidth, cornerLen))
+    }
+}
+
+// ==========================================
+// COMPANION ADAPTIVE SUB-COMPOSABLES
+// ==========================================
+
+@Composable
+fun CompactTopBar(
+    activeCard: UserCard,
+    viewModel: CardViewModel,
+    onNavigate: (ActiveScreen) -> Unit,
+    onRenameClick: () -> Unit,
+    onExportClick: () -> Unit,
+    onFullscreenClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color(0xFF0F111A))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            IconButton(
+                onClick = { onNavigate(ActiveScreen.DASHBOARD) },
+                modifier = Modifier.size(32.dp).background(Color(0xFF131722), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    modifier = Modifier.size(16.dp),
+                    tint = Color.White
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(
+                modifier = Modifier.clickable { onRenameClick() }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = activeCard.cardName,
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        modifier = Modifier.widthIn(max = 120.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Rename",
+                        modifier = Modifier.size(11.dp),
+                        tint = Color(0xFFD4AF37)
+                    )
+                }
+            }
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            IconButton(
+                onClick = { viewModel.undo() },
+                enabled = viewModel.hasUndo(),
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(if (viewModel.hasUndo()) Color(0xFF131722) else Color.Transparent, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Undo",
+                    modifier = Modifier.size(15.dp),
+                    tint = if (viewModel.hasUndo()) Color(0xFF00FFCC) else Color.DarkGray
+                )
+            }
+
+            IconButton(
+                onClick = { viewModel.redo() },
+                enabled = viewModel.hasRedo(),
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(if (viewModel.hasRedo()) Color(0xFF131722) else Color.Transparent, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = "Redo",
+                    modifier = Modifier.size(15.dp),
+                    tint = if (viewModel.hasRedo()) Color(0xFF00FFCC) else Color.DarkGray
+                )
+            }
+
+            IconButton(
+                onClick = { onFullscreenClick() },
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(Color(0xFF131722), CircleShape)
+            ) {
+                FullscreenIcon(tint = Color(0xFF00FFCC))
+            }
+
+            Button(
+                onClick = { onExportClick() },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.height(30.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    tint = Color.Black
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Export",
+                    color = Color.Black,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CompactZoomController(
+    currentZoom: Float,
+    isFit: Boolean,
+    onZoomOut: () -> Unit,
+    onZoomIn: () -> Unit,
+    onReset: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = Color(0xFF10121A).copy(0.85f),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, Color(0xFF222B3A)),
+        modifier = modifier
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
+        ) {
+            IconButton(
+                onClick = onZoomOut,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Text("-", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+            Text(
+                text = "${(currentZoom * 100).toInt()}%${if (isFit) " (Fit)" else ""}",
+                color = Color.White,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+            IconButton(
+                onClick = onZoomIn,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Zoom In",
+                    tint = Color.White,
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(14.dp)
+                    .background(Color.Gray)
+            )
+            TextButton(
+                onClick = onReset,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.height(24.dp)
+            ) {
+                Text("Fit", color = Color(0xFF00FFCC), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun LayerShortcutsRow(
+    nativeLayerTitles: Map<String, String>,
+    visibleFields: List<String>,
+    customLayersList: List<Pair<String, String>>,
+    selectedElementKey: String,
+    onLayerSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color(0xFF0F111A))
+            .border(BorderStroke(1.dp, Color(0xFF131722)))
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.List,
+            contentDescription = "Layers List",
+            tint = Color.Gray,
+            modifier = Modifier.size(14.dp)
+        )
+        nativeLayerTitles.forEach { (key, title) ->
+            val isVisible = key == "qrCode" || visibleFields.contains(key)
+            if (isVisible) {
+                val isSelected = selectedElementKey == key
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) Color(0xFFD4AF37) else Color(0xFF1E2433).copy(0.6f),
+                    border = BorderStroke(1.dp, if (isSelected) Color.White else Color(0xFF222B3A)),
+                    modifier = Modifier.clickable { onLayerSelect(key) }
+                ) {
+                    Text(
+                        text = title,
+                        color = if (isSelected) Color.Black else Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        customLayersList.forEach { (key, type) ->
+            val isSelected = selectedElementKey == key
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (isSelected) Color(0xFF00FFCC) else Color(0xFF1E2433).copy(0.6f),
+                border = BorderStroke(1.dp, if (isSelected) Color.White else Color(0xFF222B3A)),
+                modifier = Modifier.clickable { onLayerSelect(key) }
+            ) {
+                Text(
+                    text = "Layer: $type",
+                    color = if (isSelected) Color.Black else Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DpadNudgeSlidersPanel(
+    selectedElementKey: String,
+    activeCard: UserCard,
+    viewModel: CardViewModel,
+    isDpadCollapsed: Boolean,
+    onDpadCollapseToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color(0xFF10121A))
+            .border(BorderStroke(1.dp, Color(0xFF1E2433)))
+            .padding(horizontal = 12.dp, vertical = if (isDpadCollapsed) 4.dp else 8.dp)
+    ) {
+        if (isDpadCollapsed) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "NUDGE:",
+                        color = Color(0xFFD4AF37),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "[${selectedElementKey.uppercase()}]",
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        modifier = Modifier.widthIn(max = 140.dp)
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = { updateElementPosition(activeCard, selectedElementKey, -4f, 0f, viewModel) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Left", tint = Color.LightGray, modifier = Modifier.size(14.dp))
+                    }
+                    IconButton(
+                        onClick = { updateElementPosition(activeCard, selectedElementKey, 0f, -4f, viewModel) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Up", tint = Color.LightGray, modifier = Modifier.size(14.dp))
+                    }
+                    IconButton(
+                        onClick = { updateElementPosition(activeCard, selectedElementKey, 0f, 4f, viewModel) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Down", tint = Color.LightGray, modifier = Modifier.size(14.dp))
+                    }
+                    IconButton(
+                        onClick = { updateElementPosition(activeCard, selectedElementKey, 4f, 0f, viewModel) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Right", tint = Color.LightGray, modifier = Modifier.size(14.dp))
+                    }
+
+                    Box(modifier = Modifier.width(1.dp).height(14.dp).background(Color.DarkGray))
+
+                    val isLocked = activeCard.lockedElements.split(",").contains(selectedElementKey)
+                    IconButton(
+                        onClick = {
+                            val newList = if (isLocked) {
+                                activeCard.lockedElements.split(",").filter { it != selectedElementKey }.joinToString(",")
+                            } else {
+                                (activeCard.lockedElements.split(",") + selectedElementKey).filter { it.isNotEmpty() }.joinToString(",")
+                            }
+                            viewModel.applyCardEdit(activeCard.copy(lockedElements = newList))
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Lock Position",
+                            tint = if (isLocked) Color(0xFFFF5252) else Color.LightGray.copy(0.4f),
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+
+                    Box(modifier = Modifier.width(1.dp).height(14.dp).background(Color.DarkGray))
+
+                    TextButton(
+                        onClick = { onDpadCollapseToggle(false) },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                        modifier = Modifier.height(24.dp)
+                    ) {
+                        Text("+ Sliders", color = Color(0xFF00FFCC), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "LAYER: ${selectedElementKey.uppercase()}",
+                        color = Color(0xFFD4AF37),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = "Snap: " + (if (activeCard.snapToGrid) "Active (10px)" else "Inactive"),
+                        color = Color.Gray,
+                        fontSize = 9.sp
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = { updateElementPosition(activeCard, selectedElementKey, -4f, 0f, viewModel) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Left", tint = Color.White, modifier = Modifier.size(14.dp))
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(
+                            onClick = { updateElementPosition(activeCard, selectedElementKey, 0f, -4f, viewModel) },
+                            modifier = Modifier.size(22.dp)
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Up", tint = Color.White, modifier = Modifier.size(14.dp))
+                        }
+                        IconButton(
+                            onClick = { updateElementPosition(activeCard, selectedElementKey, 0f, 4f, viewModel) },
+                            modifier = Modifier.size(22.dp)
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Down", tint = Color.White, modifier = Modifier.size(14.dp))
+                        }
+                    }
+                    IconButton(
+                        onClick = { updateElementPosition(activeCard, selectedElementKey, 4f, 0f, viewModel) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Right", tint = Color.White, modifier = Modifier.size(14.dp))
+                    }
+
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.DarkGray))
+
+                    IconButton(
+                        onClick = { updateElementZIndex(activeCard, selectedElementKey, true, viewModel) },
+                        modifier = Modifier.background(Color(0xFF1E2433), RoundedCornerShape(4.dp)).size(28.dp)
+                    ) {
+                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Bring Forward", tint = Color(0xFF00FFCC), modifier = Modifier.size(14.dp))
+                    }
+                    IconButton(
+                        onClick = { updateElementZIndex(activeCard, selectedElementKey, false, viewModel) },
+                        modifier = Modifier.background(Color(0xFF1E2433), RoundedCornerShape(4.dp)).size(28.dp)
+                    ) {
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Send Backward", tint = Color(0xFFFF5E7E), modifier = Modifier.size(14.dp))
+                    }
+
+                    Icon(
+                        imageVector = if (activeCard.snapToGrid) Icons.Default.CheckCircle else Icons.Default.Info,
+                        contentDescription = "Snap toggle",
+                        tint = if (activeCard.snapToGrid) Color(0xFF00FFCC) else Color.Gray,
+                        modifier = Modifier.size(20.dp).clickable { viewModel.applyCardEdit(activeCard.copy(snapToGrid = !activeCard.snapToGrid)) }
+                    )
+
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.DarkGray))
+
+                    val isLocked = activeCard.lockedElements.split(",").contains(selectedElementKey)
+                    IconButton(
+                        onClick = {
+                            val newList = if (isLocked) {
+                                activeCard.lockedElements.split(",").filter { it != selectedElementKey }.joinToString(",")
+                            } else {
+                                (activeCard.lockedElements.split(",") + selectedElementKey).filter { it.isNotEmpty() }.joinToString(",")
+                            }
+                            viewModel.applyCardEdit(activeCard.copy(lockedElements = newList))
+                        },
+                        modifier = Modifier.background(if (isLocked) Color(0xFFFF5252).copy(0.15f) else Color(0xFF1E2433), RoundedCornerShape(4.dp)).size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Lock Position",
+                            tint = if (isLocked) Color(0xFFFF5252) else Color.LightGray.copy(0.4f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.DarkGray))
+
+                    IconButton(onClick = { onDpadCollapseToggle(true) }, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Collapse Nudge", tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.Gray, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Rotate", color = Color.Gray, fontSize = 9.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    var rotDegrees by remember(selectedElementKey) { mutableStateOf(getElementRotation(activeCard, selectedElementKey)) }
+                    Slider(
+                        value = rotDegrees,
+                        onValueChange = {
+                            rotDegrees = it
+                            updateElementSpatial(activeCard, selectedElementKey, null, null, it, null, null, null, viewModel)
+                        },
+                        valueRange = -180f..180f,
+                        colors = SliderDefaults.colors(thumbColor = Color(0xFF00FFCC), activeTrackColor = Color(0xFF00FFCC)),
+                        modifier = Modifier.height(26.dp)
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.Star, contentDescription = "Scale", tint = Color.Gray, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Scale", color = Color.Gray, fontSize = 9.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    var elementScale by remember(selectedElementKey) { mutableStateOf(getElementScale(activeCard, selectedElementKey)) }
+                    Slider(
+                        value = elementScale,
+                        onValueChange = {
+                            elementScale = it
+                            updateElementSpatial(activeCard, selectedElementKey, null, null, null, it, null, null, viewModel)
+                        },
+                        valueRange = 0.5f..2.5f,
+                        colors = SliderDefaults.colors(thumbColor = Color(0xFFD4AF37), activeTrackColor = Color(0xFFD4AF37)),
+                        modifier = Modifier.height(26.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ToolboxHeightSelectorHeader(
+    bottomPanelExpandedLevel: Int,
+    onHeightChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color(0xFF1A1F2C))
+            .border(BorderStroke(1.dp, Color(0xFF2E3547)))
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Resize Panel",
+                tint = Color(0xFFD4AF37),
+                modifier = Modifier.size(12.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "EDITOR TOOLBOX PANEL",
+                color = Color.LightGray,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Height:", color = Color.Gray, fontSize = 9.sp)
+            Text(
+                text = "HIDE",
+                color = if (bottomPanelExpandedLevel == 0) Color(0xFF00FFCC) else Color.Gray,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clickable { onHeightChange(0) }
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+            Text(
+                text = "COMPACT",
+                color = if (bottomPanelExpandedLevel == 1) Color(0xFF00FFCC) else Color.Gray,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clickable { onHeightChange(1) }
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+            Text(
+                text = "NORMAL",
+                color = if (bottomPanelExpandedLevel == 2) Color(0xFF00FFCC) else Color.Gray,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clickable { onHeightChange(2) }
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+            Text(
+                text = "TALL",
+                color = if (bottomPanelExpandedLevel == 3) Color(0xFF00FFCC) else Color.Gray,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clickable { onHeightChange(3) }
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+        }
     }
 }

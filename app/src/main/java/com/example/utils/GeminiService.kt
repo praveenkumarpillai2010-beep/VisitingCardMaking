@@ -21,48 +21,111 @@ object GeminiService {
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
+    data class CardDesignOption(
+        val themeName: String,
+        val backgroundColor: String,
+        val gradientEndColor: String,
+        val primaryColor: String,
+        val fontStyle: String,
+        val qrCodeVisible: Boolean = true,
+        val qrX: Float = 240f,
+        val qrY: Float = 110f,
+        val visibleFields: List<String> = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address")
+    )
+
     interface AIAssistantCallback {
-        fun onSuccess(themeName: String, backgroundColor: String, gradientEndColor: String, primaryColor: String, fontStyle: String, qrX: Float, qrY: Float, visibleFields: List<String>)
+        fun onSuccess(options: List<CardDesignOption>)
         fun onFailure(error: String)
     }
 
     fun generateCardLayout(
         name: String,
-        businessType: String,
         companyName: String,
+        jobTitle: String,
+        phoneNumber: String,
+        email: String,
+        website: String,
+        address: String,
+        category: String,
+        preferredColor: String,
+        preferredStyle: String,
+        logoUri: String?,
+        photoUri: String?,
         callback: AIAssistantCallback
     ) {
         val apiKey = BuildConfig.GEMINI_API_KEY
         if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
-            // Simulated local offline generator as defensive fallback or preview
-            simulateLocalAIGeneration(name, businessType, companyName, callback)
+            simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
             return
         }
 
         val endpoint = "$BASE_URL/$MODEL_NAME:generateContent?key=$apiKey"
         
         val systemInstruction = """
-            You are a professional Graphic and Branding UI Designer.
-            Your task is to propose an exquisite, high-end visiting card layout based on the user's details.
+            You are a professional Graphic and Branding UI Designer with elite aesthetic sense.
+            Your task is to generate exactly 3 beautiful, distinct, high-end visiting card layout design proposals (as Option 1, Option 2, Option 3) matching the user's requirements.
+            Design 1 MUST match the user requested design style ($preferredStyle) and preferred color tone ($preferredColor).
+            Design 2 MUST be a luxury prestige signature gold variation with elegant serif typography.
+            Design 3 MUST be a futuristic high-tech neon accented minimal design.
+
+            The fontStyle field must be exactly one of: "Space Grotesk", "Elegant Serif", "Modern Bold", or "Tech Clean".
+
             You must output ONLY a valid raw JSON object. Do not include markdown code block characters like ```json.
-            The JSON object must have EXACTLY the following structure with no other commentary:
+            The JSON object must have EXACTLY the following structure with no other commentary or wrap:
             {
-              "themeName": "Theme Design Name",
-              "backgroundColor": "#HEXCOLOR",
-              "gradientEndColor": "#HEXCOLOR",
-              "primaryColor": "#HEXCOLOR",
-              "fontStyle": "Space Grotesk" or "Elegant Serif" or "Modern Bold" or "Tech Clean",
-              "qrCodeVisible": true,
-              "qrCodeX": 250.0,
-              "qrCodeY": 110.0,
-              "qrCodeColor": "#HEXCOLOR",
-              "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"]
+              "options": [
+                {
+                  "themeName": "Theme Option 1 Name",
+                  "backgroundColor": "#HEXCOLOR",
+                  "gradientEndColor": "#HEXCOLOR",
+                  "primaryColor": "#HEXCOLOR",
+                  "fontStyle": "font style name",
+                  "qrCodeVisible": true,
+                  "qrCodeX": 240.0,
+                  "qrCodeY": 110.0,
+                  "qrCodeColor": "#HEXCOLOR",
+                  "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"]
+                },
+                {
+                  "themeName": "Theme Option 2 Name",
+                  "backgroundColor": "#HEXCOLOR",
+                  "gradientEndColor": "#HEXCOLOR",
+                  "primaryColor": "#HEXCOLOR",
+                  "fontStyle": "font style name",
+                  "qrCodeVisible": true,
+                  "qrCodeX": 240.0,
+                  "qrCodeY": 110.0,
+                  "qrCodeColor": "#HEXCOLOR",
+                  "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"]
+                },
+                {
+                  "themeName": "Theme Option 3 Name",
+                  "backgroundColor": "#HEXCOLOR",
+                  "gradientEndColor": "#HEXCOLOR",
+                  "primaryColor": "#HEXCOLOR",
+                  "fontStyle": "font style name",
+                  "qrCodeVisible": true,
+                  "qrCodeX": 240.0,
+                  "qrCodeY": 110.0,
+                  "qrCodeColor": "#HEXCOLOR",
+                  "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"]
+                }
+              ]
             }
         """.trimIndent()
 
-        val prompt = "Create a custom theme layout for Name: $name, business vertical: $businessType, Company: $companyName."
+        val prompt = """
+            Generate 3 visiting card layouts for:
+            - Full Name: $name
+            - Company: $companyName
+            - Job Title: $jobTitle
+            - Category: $category
+            - Preferred Color: $preferredColor
+            - Preferred Style: $preferredStyle
+            - Has Custom Logo: ${if (logoUri != null) "Yes" else "No"}
+            - Has Custom Profile Photo: ${if (photoUri != null) "Yes" else "No"}
+        """.trimIndent()
 
-        // Build request body according to Gemini REST specification
         val requestJson = JSONObject().apply {
             put("contents", JSONArray().apply {
                 put(JSONObject().apply {
@@ -82,7 +145,7 @@ object GeminiService {
             })
             put("generationConfig", JSONObject().apply {
                 put("responseMimeType", "application/json")
-                put("temperature", 0.7)
+                put("temperature", 0.75)
             })
         }
 
@@ -95,14 +158,14 @@ object GeminiService {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "Network failure: ${e.message}", e)
-                simulateLocalAIGeneration(name, businessType, companyName, callback)
+                simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val responseBody = response.body?.string() ?: ""
                 if (!response.isSuccessful) {
                     Log.e(TAG, "API failed: Code ${response.code}, Msg: $responseBody")
-                    simulateLocalAIGeneration(name, businessType, companyName, callback)
+                    simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
                     return
                 }
 
@@ -114,7 +177,6 @@ object GeminiService {
                     val parts = content.getJSONArray("parts")
                     val rawText = parts.getJSONObject(0).getString("text").trim()
                     
-                    // Sanitize potential markdown wrap
                     val cleanJsonStr = rawText
                         .removePrefix("```json")
                         .removePrefix("```")
@@ -122,38 +184,52 @@ object GeminiService {
                         .trim()
 
                     val resultJson = JSONObject(cleanJsonStr)
-                    val themeName = resultJson.optString("themeName", "AI Classic Dark")
-                    val bgColor = resultJson.optString("backgroundColor", "#11131E")
-                    val gradientEndColor = resultJson.optString("gradientEndColor", "#1E2235")
-                    val primaryColor = resultJson.optString("primaryColor", "#FFD700")
-                    val fontStyle = resultJson.optString("fontStyle", "Space Grotesk")
-                    val qrCodeX = resultJson.optDouble("qrCodeX", 260.0).toFloat()
-                    val qrCodeY = resultJson.optDouble("qrCodeY", 100.0).toFloat()
-                    
-                    val fieldsArray = resultJson.optJSONArray("visibleFields")
-                    val visibleList = mutableListOf<String>()
-                    if (fieldsArray != null) {
-                        for (i in 0 until fieldsArray.length()) {
-                            visibleList.add(fieldsArray.getString(i))
+                    val jsonOptions = resultJson.getJSONArray("options")
+                    val optionsList = mutableListOf<CardDesignOption>()
+
+                    for (i in 0 until jsonOptions.length()) {
+                        val obj = jsonOptions.getJSONObject(i)
+                        val themeName = obj.optString("themeName", "AI Option ${i + 1}")
+                        val bgColor = obj.optString("backgroundColor", "#11131E")
+                        val gradColor = obj.optString("gradientEndColor", "#1E2235")
+                        val primColor = obj.optString("primaryColor", "#FFD700")
+                        val fontStyle = obj.optString("fontStyle", "Space Grotesk")
+                        val qrCodeVisible = obj.optBoolean("qrCodeVisible", true)
+                        val qrCodeX = obj.optDouble("qrCodeX", 240.0).toFloat()
+                        val qrCodeY = obj.optDouble("qrCodeY", 110.0).toFloat()
+
+                        val fieldsArr = obj.optJSONArray("visibleFields")
+                        val visibleList = mutableListOf<String>()
+                        if (fieldsArr != null) {
+                            for (j in 0 until fieldsArr.length()) {
+                                visibleList.add(fieldsArr.getString(j))
+                            }
+                        } else {
+                            visibleList.addAll(listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website"))
                         }
-                    } else {
-                        visibleList.addAll(listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website"))
+
+                        optionsList.add(CardDesignOption(
+                            themeName = themeName,
+                            backgroundColor = bgColor,
+                            gradientEndColor = gradColor,
+                            primaryColor = primColor,
+                            fontStyle = fontStyle,
+                            qrCodeVisible = qrCodeVisible,
+                            qrX = qrCodeX,
+                            qrY = qrCodeY,
+                            visibleFields = visibleList
+                        ))
                     }
 
-                    callback.onSuccess(
-                        themeName = themeName,
-                        backgroundColor = bgColor,
-                        gradientEndColor = gradientEndColor,
-                        primaryColor = primaryColor,
-                        fontStyle = fontStyle,
-                        qrX = qrCodeX,
-                        qrY = qrCodeY,
-                        visibleFields = visibleList
-                    )
+                    if (optionsList.isNotEmpty()) {
+                        callback.onSuccess(optionsList)
+                    } else {
+                        simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
+                    }
 
                 } catch (e: Exception) {
-                    Log.e(TAG, "JSON parse failure from Gemini response", e)
-                    simulateLocalAIGeneration(name, businessType, companyName, callback)
+                    Log.e(TAG, "JSON parsing error from Gemini response", e)
+                    simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
                 }
             }
         })
@@ -161,84 +237,84 @@ object GeminiService {
 
     private fun simulateLocalAIGeneration(
         name: String,
-        businessType: String,
         companyName: String,
+        jobTitle: String,
+        category: String,
+        preferredColor: String,
+        preferredStyle: String,
         callback: AIAssistantCallback
     ) {
-        // High quality local engine that executes instantly if offline, without keys, or on timeout.
-        val lowerType = businessType.lowercase()
-        val themeName: String
-        val bgColor: String
-        val gradientEnd: String
-        val primaryColor: String
-        val fontStyle: String
-        val qrX: Float
-        val qrY: Float
-        val visible = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address")
-
-        when {
-            lowerType.contains("tech") || lowerType.contains("soft") || lowerType.contains("develop") || lowerType.contains("code") -> {
-                themeName = "AI Cyber Tech Minimal"
-                bgColor = "#080B10"
-                gradientEnd = "#0D1D2C"
-                primaryColor = "#00FFCC"
-                fontStyle = "Tech Clean"
-                qrX = 280f
-                qrY = 40f
-            }
-            lowerType.contains("luxury") || lowerType.contains("jewelry") || lowerType.contains("gold") || lowerType.contains("premium") -> {
-                themeName = "AI Golden Luxury Noir"
-                bgColor = "#0D0D0E"
-                gradientEnd = "#1E1A13"
-                primaryColor = "#D4AF37"
-                fontStyle = "Elegant Serif"
-                qrX = 260f
-                qrY = 110f
-            }
-            lowerType.contains("creative") || lowerType.contains("art") || lowerType.contains("design") || lowerType.contains("photo") -> {
-                themeName = "AI Vibrant Art Neon"
-                bgColor = "#18051E"
-                gradientEnd = "#35083B"
-                primaryColor = "#FF007F"
-                fontStyle = "Space Grotesk"
-                qrX = 260f
-                qrY = 110f
-            }
-            lowerType.contains("medical") || lowerType.contains("doctor") || lowerType.contains("clinic") || lowerType.contains("health") -> {
-                themeName = "AI Clinical Teal"
-                bgColor = "#FAFDFD"
-                gradientEnd = "#ECF6F6"
-                primaryColor = "#008080"
-                fontStyle = "Modern Bold"
-                qrX = 270f
-                qrY = 100f
-            }
-            else -> {
-                // Corporate classic
-                themeName = "AI Royal Corporate"
-                bgColor = "#0A0E17"
-                gradientEnd = "#131C2E"
-                primaryColor = "#3D85C6"
-                fontStyle = "Space Grotesk"
-                qrX = 265f
-                qrY = 115f
+        val userColor = if (preferredColor.startsWith("#") && preferredColor.length == 7) {
+            preferredColor
+        } else {
+            when (preferredColor.lowercase()) {
+                "red" -> "#E53935"
+                "blue" -> "#1E88E5"
+                "green" -> "#43A047"
+                "gold" -> "#D4AF37"
+                "purple" -> "#8E24AA"
+                "cyan" -> "#00ACC1"
+                "orange" -> "#F4511E"
+                "silver" -> "#B0BEC5"
+                else -> "#D4AF37" // default Gold accent
             }
         }
 
-        // Return immediately on background thread
+        // Generate 3 elegant, customized falling options locally
+        val list = mutableListOf<CardDesignOption>()
+
+        // Option 1: Style / category match
+        val fontOption1 = when (preferredStyle.lowercase()) {
+            "luxury", "elegant" -> "Elegant Serif"
+            "minimal" -> "Space Grotesk"
+            "technology" -> "Tech Clean"
+            "professional", "corporate" -> "Modern Bold"
+            else -> "Space Grotesk"
+        }
+
+        // Option 1
+        list.add(CardDesignOption(
+            themeName = "AI Preferred $preferredStyle",
+            backgroundColor = "#0F121F",
+            gradientEndColor = "#1F2943",
+            primaryColor = userColor,
+            fontStyle = fontOption1,
+            qrCodeVisible = true,
+            qrX = 240f,
+            qrY = 110f,
+            visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address")
+        ))
+
+        // Option 2: Luxury Gold Accent Elite
+        list.add(CardDesignOption(
+            themeName = "AI Golden Luxury Elite",
+            backgroundColor = "#0A0A0C",
+            gradientEndColor = "#1B170B",
+            primaryColor = "#D4AF37",
+            fontStyle = "Elegant Serif",
+            qrCodeVisible = true,
+            qrX = 240f,
+            qrY = 110f,
+            visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address")
+        ))
+
+        // Option 3: Cyber Tech Futuristic
+        list.add(CardDesignOption(
+            themeName = "AI Cyber Tech Minimalist",
+            backgroundColor = "#03060C",
+            gradientEndColor = "#0B2135",
+            primaryColor = "#00FFCC",
+            fontStyle = "Tech Clean",
+            qrCodeVisible = true,
+            qrX = 242f,
+            qrY = 108f,
+            visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website")
+        ))
+
         Thread {
             try {
-                Thread.sleep(1500) // Realistic loader delay
-                callback.onSuccess(
-                    themeName = themeName,
-                    backgroundColor = bgColor,
-                    gradientEndColor = gradientEnd,
-                    primaryColor = primaryColor,
-                    fontStyle = fontStyle,
-                    qrX = qrX,
-                    qrY = qrY,
-                    visibleFields = visible
-                )
+                Thread.sleep(1800) // realistic delay to feel premium
+                callback.onSuccess(list)
             } catch (ignored: Exception) {}
         }.start()
     }

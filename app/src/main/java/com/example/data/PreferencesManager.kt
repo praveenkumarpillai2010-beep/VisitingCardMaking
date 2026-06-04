@@ -31,6 +31,8 @@ class PreferencesManager(context: Context) {
         private const val KEY_APP_OPEN_ENABLED = "app_open_enabled"
         private const val KEY_NATIVE_ID = "native_id"
         private const val KEY_NATIVE_ENABLED = "native_enabled"
+        private const val KEY_BACKGROUNDS_UPLOADED_COUNT = "backgrounds_uploaded_count"
+        private const val KEY_AI_GENERATIONS_COUNT = "ai_generations_count"
     }
 
     // AUTH GETTERS & SETTERS
@@ -118,6 +120,14 @@ class PreferencesManager(context: Context) {
     var nativeAdEnabled: Boolean
         get() = prefs.getBoolean(KEY_NATIVE_ENABLED, true)
         set(value) = prefs.edit().putBoolean(KEY_NATIVE_ENABLED, value).apply()
+
+    var customBackgroundsUploadedCount: Int
+        get() = prefs.getInt(KEY_BACKGROUNDS_UPLOADED_COUNT, 0)
+        set(value) = prefs.edit().putInt(KEY_BACKGROUNDS_UPLOADED_COUNT, value).apply()
+
+    var aiGenerationsCount: Int
+        get() = prefs.getInt(KEY_AI_GENERATIONS_COUNT, 0)
+        set(value) = prefs.edit().putInt(KEY_AI_GENERATIONS_COUNT, value).apply()
 
     // CLEAR ALL FOR SIGN OUT
     fun clearAuth() {

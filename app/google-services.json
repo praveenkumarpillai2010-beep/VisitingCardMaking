@@ -1,31 +1,44 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "aistudio-cardmaker-wfpyqx",
-    "storage_bucket": "aistudio-cardmaker-wfpyqx.appspot.com"
+    "project_number": "260770916565",
+    "project_id": "my-project-5577-498210",
+    "storage_bucket": "my-project-5577-498210.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",
+        "mobilesdk_app_id": "1:260770916565:android:9fcc69e4e9a20350d55a5c",
         "android_client_info": {
           "package_name": "com.aistudio.cardmaker.wfpyqx"
         }
       },
       "oauth_client": [
         {
-          "client_id": "209709694640-f9ubm1b1si3vhphcpr4l3jf00vkh5jh8.apps.googleusercontent.com",
+          "client_id": "260770916565-lvjdn8f4mtmteebbqjl15tmllljtc4qs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.cardmaker.wfpyqx",
+            "certificate_hash": "a8a872cb5d6650d6f97234b3521cfb63cf15aa3a"
+          }
+        },
+        {
+          "client_id": "260770916565-gfigbv9v9diiabj6amqq5f26o0t5a635.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyPlaceholderKey-123456789abcdef"
+          "current_key": "AIzaSyASil_zX3OU4K86YUx1sTIad3zxiiAyV1k"
         }
       ],
       "services": {
         "appinvite_service": {
-          "status": 1
+          "other_platform_oauth_client": [
+            {
+              "client_id": "260770916565-gfigbv9v9diiabj6amqq5f26o0t5a635.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -26,7 +26,13 @@ class MainActivity : ComponentActivity() {
         MobileAds.initialize(this)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            val activeTheme by viewModel.activeTheme.collectAsState()
+            val useDarkTheme = when (activeTheme) {
+                "DARK" -> true
+                "LIGHT" -> false
+                else -> androidx.compose.foundation.isSystemInDarkTheme()
+            }
+            MyApplicationTheme(darkTheme = useDarkTheme) {
                 var currentScreen by remember { mutableStateOf(ActiveScreen.SPLASH) }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->

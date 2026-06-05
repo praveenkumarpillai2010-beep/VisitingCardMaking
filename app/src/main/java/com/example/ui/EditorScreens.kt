@@ -1209,18 +1209,7 @@ fun WYSIWYGCardCanvas(
             layer.content(this)
         }
 
-        // WATERMARK IF STANDALONE SANDBOX FREE MODE
-        if (!card.isPremium) {
-            Text(
-                text = "Made by Pillai\'Play Maker",
-                color = Color.LightGray.copy(0.40f),
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Light,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 12.dp, bottom = 12.dp)
-            )
-        }
+
     } }
 }
 
@@ -1682,18 +1671,12 @@ fun EditorStylingPanel(card: UserCard, viewModel: CardViewModel) {
     ) { uri: Uri? ->
         if (uri != null) {
             val count = viewModel.prefs.customBackgroundsUploadedCount
-            if (!isPremium && count >= 5) {
-                Toast.makeText(context, "Custom background limit reached (5/5). Please upgrade to Premium!", Toast.LENGTH_LONG).show()
-            } else {
-                if (!isPremium) {
-                    viewModel.prefs.customBackgroundsUploadedCount = count + 1
-                }
-                viewModel.applyCardEdit(card.copy(
-                    backgroundType = "PATTERN",
-                    backgroundImage = uri.toString()
-                ))
-                Toast.makeText(context, if (isPremium) "Premium custom background applied!" else "Custom background applied (${count + 1}/5)!", Toast.LENGTH_SHORT).show()
-            }
+            viewModel.prefs.customBackgroundsUploadedCount = count + 1
+            viewModel.applyCardEdit(card.copy(
+                backgroundType = "PATTERN",
+                backgroundImage = uri.toString()
+            ))
+            Toast.makeText(context, "Custom background applied successfully!", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1852,15 +1835,13 @@ fun EditorStylingPanel(card: UserCard, viewModel: CardViewModel) {
                 }
             }
         }
-        if (!isPremium) {
-            val uploads = viewModel.prefs.customBackgroundsUploadedCount
-            Text(
-                text = "Custom Background Storage Used: $uploads / 5 custom backgrounds.",
-                color = if (uploads >= 5) Color.Red else Color.Gray,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+        val uploads = viewModel.prefs.customBackgroundsUploadedCount
+        Text(
+            text = "Custom Backgrounds Applied: $uploads (Unlimited)",
+            color = Color.Gray,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -1879,6 +1860,49 @@ fun EditorQRPanel(
     var verificationWarningText by remember { mutableStateOf<String?>(null) }
     var showCropDialog by remember { mutableStateOf<Bitmap?>(null) }
     var cropCropBoundary by remember { mutableStateOf(0.15f) }
+
+    // vCard dynamic include options
+    var vcardIncludeName by remember { mutableStateOf(true) }
+    var vcardIncludeTitle by remember { mutableStateOf(true) }
+    var vcardIncludeCompany by remember { mutableStateOf(true) }
+    var vcardIncludePhone by remember { mutableStateOf(true) }
+    var vcardIncludeEmail by remember { mutableStateOf(true) }
+    var vcardIncludeWebsite by remember { mutableStateOf(true) }
+    var vcardIncludeAddress by remember { mutableStateOf(true) }
+
+    // Reactively update vCard QR code data when details or options change
+    LaunchedEffect(
+        card.fullName,
+        card.jobTitle,
+        card.companyName,
+        card.mobileNumber,
+        card.email,
+        card.website,
+        card.address,
+        card.qrCodeType,
+        vcardIncludeName,
+        vcardIncludeTitle,
+        vcardIncludeCompany,
+        vcardIncludePhone,
+        vcardIncludeEmail,
+        vcardIncludeWebsite,
+        vcardIncludeAddress
+    ) {
+        if (card.qrCodeType == "VCARD") {
+            val generated = com.example.utils.QRGenerator.generateVCard(
+                fullName = if (vcardIncludeName) card.fullName else "",
+                jobTitle = if (vcardIncludeTitle) card.jobTitle else "",
+                companyName = if (vcardIncludeCompany) card.companyName else "",
+                phoneNumber = if (vcardIncludePhone) card.mobileNumber else "",
+                email = if (vcardIncludeEmail) card.email else "",
+                website = if (vcardIncludeWebsite) card.website else "",
+                address = if (vcardIncludeAddress) card.address else ""
+            )
+            if (card.qrCodeData != generated) {
+                viewModel.applyCardEdit(card.copy(qrCodeData = generated))
+            }
+        }
+    }
 
     // Launcher for Gallery image upload
     val galleryPickerLauncher = rememberLauncherForActivityResult(
@@ -1953,7 +1977,7 @@ fun EditorQRPanel(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf("WEBSITE", "WHATSAPP", "EMAIL", "PHONE", "SOCIAL").forEach { type ->
+                    listOf("WEBSITE", "WHATSAPP", "EMAIL", "PHONE", "SOCIAL", "VCARD").forEach { type ->
                         val active = card.qrCodeType == type
                         Surface(
                             shape = RoundedCornerShape(8.dp),
@@ -1964,13 +1988,22 @@ fun EditorQRPanel(
                                     "EMAIL" -> "mailto:${card.email}"
                                     "PHONE" -> "tel:${card.mobileNumber}"
                                     "SOCIAL" -> "https://instagram.com/${card.instagram}"
+                                    "VCARD" -> com.example.utils.QRGenerator.generateVCard(
+                                        fullName = if (vcardIncludeName) card.fullName else "",
+                                        jobTitle = if (vcardIncludeTitle) card.jobTitle else "",
+                                        companyName = if (vcardIncludeCompany) card.companyName else "",
+                                        phoneNumber = if (vcardIncludePhone) card.mobileNumber else "",
+                                        email = if (vcardIncludeEmail) card.email else "",
+                                        website = if (vcardIncludeWebsite) card.website else "",
+                                        address = if (vcardIncludeAddress) card.address else ""
+                                    )
                                     else -> card.website
                                 }
                                 viewModel.applyCardEdit(card.copy(qrCodeType = type, qrCodeData = data))
                             }
                         ) {
                             Text(
-                                text = type,
+                                text = if (type == "VCARD") "CONTACT CARD" else type,
                                 color = if (active) Color.Black else Color.White,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
@@ -1980,14 +2013,57 @@ fun EditorQRPanel(
                     }
                 }
 
-                OutlinedTextField(
-                    value = card.qrCodeData,
-                    onValueChange = { viewModel.applyCardEdit(card.copy(qrCodeData = it)) },
-                    label = { Text("Encoded Destination URI Data") },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if (card.qrCodeType == "VCARD") {
+                    Surface(
+                        color = Color(0xFF131722),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, Color(0xFF222B3A)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text("QR Contact Details Configuration", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Choose which details from this card form are embedded inside the scannable QR coordinate. Modern iOS/Android lens apps automatically prompt 'Add to contacts' upon sensing vCard format.", color = Color.Gray, fontSize = 10.sp)
+                            
+                            VCardFieldToggleRow(label = "Full Name (${card.fullName})", checked = vcardIncludeName) { vcardIncludeName = it }
+                            VCardFieldToggleRow(label = "Job Title (${card.jobTitle})", checked = vcardIncludeTitle) { vcardIncludeTitle = it }
+                            VCardFieldToggleRow(label = "Company (${card.companyName})", checked = vcardIncludeCompany) { vcardIncludeCompany = it }
+                            VCardFieldToggleRow(label = "Phone Number (${card.mobileNumber})", checked = vcardIncludePhone) { vcardIncludePhone = it }
+                            VCardFieldToggleRow(label = "Email Address (${card.email})", checked = vcardIncludeEmail) { vcardIncludeEmail = it }
+                            VCardFieldToggleRow(label = "Website (${card.website})", checked = vcardIncludeWebsite) { vcardIncludeWebsite = it }
+                            VCardFieldToggleRow(label = "Address (${card.address})", checked = vcardIncludeAddress) { vcardIncludeAddress = it }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Encoded raw vCard preview:", color = Color.Gray, fontSize = 10.sp)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.Black.copy(0.3f), RoundedCornerShape(4.dp))
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = card.qrCodeData,
+                                    color = Color(0xFF00FFCC),
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 10,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = card.qrCodeData,
+                        onValueChange = { viewModel.applyCardEdit(card.copy(qrCodeData = it)) },
+                        label = { Text("Encoded Destination URI Data") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             } else {
                 // UPLOAD EXISTING BRIGHT QR BLOCK
                 Surface(
@@ -2185,13 +2261,12 @@ fun EditorQRPanel(
                 }
             }
 
-            // Color design overlays (Only for VIP subscribers!)
-            Text("Premium Custom QR Outline Colors", color = Color.LightGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            // Color design overlays (unlocked for all users)
+            Text("Custom QR Outline Colors", color = Color.LightGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Box {
                 Row(
                     modifier = Modifier
-                        .horizontalScroll(rememberScrollState())
-                        .alpha(if (isPremium) 1f else 0.45f),
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     listOf("#00FFCC", "#D4AF37", "#FF5E7E", "#5BC0BE", "#FFFFFF").forEach { cHex ->
@@ -2200,26 +2275,10 @@ fun EditorQRPanel(
                                 .size(32.dp)
                                 .background(Color(android.graphics.Color.parseColor(cHex)), CircleShape)
                                 .border(1.5.dp, if (card.qrCodeColor == cHex) Color.White else Color.Transparent, CircleShape)
-                                .clickable(enabled = isPremium) {
+                                .clickable {
                                     viewModel.applyCardEdit(card.copy(qrCodeColor = cHex))
                                 }
                         )
-                    }
-                }
-
-                if (!isPremium) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(Color.Black.copy(0.35f))
-                            .clickable { onNavigate(ActiveScreen.PREMIUM) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Lock, contentDescription = "Lock", tint = Color(0xFFD4AF37), modifier = Modifier.size(12.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("VIP custom styling colors", color = Color(0xFFD4AF37), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
                     }
                 }
             }
@@ -2373,7 +2432,7 @@ fun EditorCustomLayersPanel(
             }
         }
 
-        // MULTIPLE / ADDITIONAL QR CODES (VIP Feature gate limits check!)
+        // MULTIPLE / ADDITIONAL QR CODES (Fully unlocked)
         Surface(
             color = Color(0xFF131722),
             shape = RoundedCornerShape(10.dp),
@@ -2383,65 +2442,46 @@ fun EditorCustomLayersPanel(
             Box {
                 Column(
                     modifier = Modifier
-                        .padding(14.dp)
-                        .alpha(if (isPremium) 1f else 0.45f),
+                        .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Add Multiple QR Codes (VIP Premium)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("Add Multiple QR Codes", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Text("Creates secondary mini QR codes encoded with alternative destination links.", color = Color.Gray, fontSize = 11.sp, lineHeight = 15.sp)
 
                     Button(
                         onClick = {
-                            if (isPremium) {
-                                try {
-                                    val currentArray = JSONArray(card.designElementsJson)
-                                    val newId = "custom_extra_qr_" + UUID.randomUUID().toString().substring(0, 6)
+                            try {
+                                val currentArray = JSONArray(card.designElementsJson)
+                                val newId = "custom_extra_qr_" + UUID.randomUUID().toString().substring(0, 6)
 
-                                    val newObj = org.json.JSONObject().apply {
-                                        put("id", newId)
-                                        put("type", "QR_CODE")
-                                        put("name", "Extra QR Code")
-                                        put("content", "https://pillaiplay.com/social")
-                                        put("x", 180.0)
-                                        put("y", 150.0)
-                                        put("color", "#00FFCC")
-                                        put("fontSize", 14.0)
-                                        put("isBold", false)
-                                        put("isItalic", false)
-                                        put("isUnderline", false)
-                                        put("scale", 1.0)
-                                        put("rotation", 0.0)
-                                        put("zIndex", currentArray.length() + 10)
-                                    }
-                                    currentArray.put(newObj)
-                                    viewModel.applyCardEdit(card.copy(designElementsJson = currentArray.toString()))
-                                    Toast.makeText(context, "Secondary QR code injected successfully!", Toast.LENGTH_SHORT).show()
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
+                                val newObj = org.json.JSONObject().apply {
+                                    put("id", newId)
+                                    put("type", "QR_CODE")
+                                    put("name", "Extra QR Code")
+                                    put("content", "https://pillaiplay.com/social")
+                                    put("x", 180.0)
+                                    put("y", 150.0)
+                                    put("color", "#00FFCC")
+                                    put("fontSize", 14.0)
+                                    put("isBold", false)
+                                    put("isItalic", false)
+                                    put("isUnderline", false)
+                                    put("scale", 1.0)
+                                    put("rotation", 0.0)
+                                    put("zIndex", currentArray.length() + 10)
                                 }
+                                currentArray.put(newObj)
+                                viewModel.applyCardEdit(card.copy(designElementsJson = currentArray.toString()))
+                                Toast.makeText(context, "Secondary QR code injected successfully!", Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = isPremium
+                        enabled = true
                     ) {
                         Text("Add Secondary Multi-QR", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                if (!isPremium) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(Color.Black.copy(0.35f))
-                            .clickable { onNavigate(ActiveScreen.PREMIUM) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(14.dp)) {
-                            Icon(Icons.Default.Lock, contentDescription = "Lock", tint = Color(0xFFD4AF37), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Upgrade Premium for Multiple QR Codes", color = Color(0xFFD4AF37), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
                     }
                 }
             }
@@ -2473,6 +2513,7 @@ fun ExportSettingsDialog(
     val context = LocalContext.current
     var exportFormat by remember { mutableStateOf("PNG") }
     var exportQuality by remember { mutableStateOf("STANDARD") }
+    var includeBleedAndCropMarks by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2504,7 +2545,7 @@ fun ExportSettingsDialog(
                     }
                 }
 
-                Text("Rendering Dimensions:", color = Color.LightGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Rendering Dimensions / Quality:", color = Color.LightGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     QualityOptionRow("Standard resolution (800x480)", "STANDARD", exportQuality == "STANDARD") {
                         exportQuality = "STANDARD"
@@ -2517,20 +2558,57 @@ fun ExportSettingsDialog(
                     }
                 }
 
-                if (!isPremiumAccount && exportQuality != "STANDARD") {
-                    Text(
-                        text = "⚠️ Free account limits: HD/UHD is simulating watermark elements. Go Premium for pure vector elements.",
-                        color = Color(0xFFFF5E7E),
-                        fontSize = 10.sp,
-                        lineHeight = 14.sp
-                    )
+                if (exportFormat == "PDF") {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Professional Printing Setup", color = Color.LightGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Surface(
+                        color = Color(0xFF1E2433),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, Color(0xFF222B3A)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .clickable { includeBleedAndCropMarks = !includeBleedAndCropMarks }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = includeBleedAndCropMarks,
+                                onCheckedChange = { includeBleedAndCropMarks = it },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = Color(0xFF00FFCC),
+                                    uncheckedColor = Color.Gray,
+                                    checkmarkColor = Color.Black
+                                ),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Bleed & Corner Crop Marks", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Generates a true-vector PDF with 8% outer border bleed margins and professional corner crop marks for alignment at physical print-shops.",
+                                    color = Color.Gray,
+                                    fontSize = 9.sp,
+                                    lineHeight = 12.sp
+                                )
+                            }
+                        }
+                    }
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val targetFile = PDFExporter.exportCardToFile(context, card, exportFormat, exportQuality)
+                    val targetFile = PDFExporter.exportCardToFile(
+                        context = context,
+                        card = card,
+                        format = exportFormat,
+                        quality = exportQuality,
+                        includeBleedAndCropMarks = includeBleedAndCropMarks
+                    )
                     if (targetFile != null && targetFile.exists()) {
                         triggerSystemShare(context, targetFile, exportFormat)
                         onDismiss()
@@ -2713,6 +2791,264 @@ fun CompactTopBar(
                         tint = Color(0xFFD4AF37)
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+            val autoSaveEnabled by viewModel.isAutoSaveEnabled.collectAsState()
+            val autoSaveStatus by viewModel.autoSaveStatus.collectAsState()
+            val autoSaveIntervalSeconds by viewModel.autoSaveIntervalSeconds.collectAsState()
+            var showAutoSaveDialog by remember { mutableStateOf(false) }
+
+            Surface(
+                color = if (autoSaveEnabled) Color(0xFF1E2433) else Color(0x33FF0000),
+                border = BorderStroke(0.5.dp, if (autoSaveEnabled) Color(0xFF00FFCC).copy(0.3f) else Color.Red.copy(0.3f)),
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier
+                    .clickable { showAutoSaveDialog = true }
+                    .padding(vertical = 2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .background(
+                                color = if (autoSaveStatus == "Saving...") Color(0xFFFFB300)
+                                        else if (autoSaveEnabled) Color(0xFF00FFCC)
+                                        else Color.Red,
+                                shape = CircleShape
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = if (autoSaveStatus.startsWith("Saved at")) {
+                            autoSaveStatus
+                        } else if (autoSaveStatus == "Saving...") {
+                            "Saving..."
+                        } else if (autoSaveEnabled) {
+                            "Auto-Save"
+                        } else {
+                            "Auto-Save Off"
+                        },
+                        color = Color.LightGray,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+            var showSaveTemplateDialog by remember { mutableStateOf(false) }
+            var templateNameInput by remember { mutableStateOf("${activeCard.cardName} Template") }
+
+            Surface(
+                color = Color(0xFF1B223C),
+                border = BorderStroke(0.5.dp, Color(0xFFD4AF37).copy(0.4f)),
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier
+                    .clickable { showSaveTemplateDialog = true }
+                    .padding(vertical = 2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = "Save Template",
+                        tint = Color(0xFFD4AF37),
+                        modifier = Modifier.size(9.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = "Save Template",
+                        color = Color.White,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            if (showSaveTemplateDialog) {
+                AlertDialog(
+                    onDismissRequest = { showSaveTemplateDialog = false },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFD4AF37),
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = "Save as My Template",
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    },
+                    containerColor = Color(0xFF0F111A),
+                    text = {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Text(
+                                text = "Store your exact current layout, colors, fonts, backgrounds, stamp sizes, QR/logo positions locally. You can use it as a base when creating new cards!",
+                                color = Color.Gray,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp
+                            )
+                            OutlinedTextField(
+                                value = templateNameInput,
+                                onValueChange = { templateNameInput = it },
+                                label = { Text("Template Name", color = Color.Gray, fontSize = 11.sp) },
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedLabelColor = Color(0xFFD4AF37)
+                                )
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                if (templateNameInput.isNotEmpty()) {
+                                    viewModel.saveAsMyTemplate(activeCard, templateNameInput)
+                                    showSaveTemplateDialog = false
+                                }
+                            }
+                        ) {
+                            Text("Save Template", color = Color(0xFFD4AF37), fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showSaveTemplateDialog = false }) {
+                            Text("Cancel", color = Color.Gray)
+                        }
+                    }
+                )
+            }
+
+            if (showAutoSaveDialog) {
+                AlertDialog(
+                    onDismissRequest = { showAutoSaveDialog = false },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = Color(0xFF00FFCC),
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = "Auto-Save Prefs",
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    },
+                    containerColor = Color(0xFF0F111A),
+                    text = {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Text(
+                                text = "Pillai'Play Visiting Card Maker stores modification milestones inside your device local database sandbox seamlessly.",
+                                color = Color.Gray,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp
+                            )
+
+                            HorizontalDivider(color = Color(0xFF222B3A))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Periodic Backup Loop", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Backs up on modification", color = Color.Gray, fontSize = 10.sp)
+                                }
+                                Switch(
+                                    checked = autoSaveEnabled,
+                                    onCheckedChange = { viewModel.toggleAutoSave(it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color(0xFF00FFCC),
+                                        checkedTrackColor = Color(0xFF00FFCC).copy(0.3f),
+                                        uncheckedThumbColor = Color.LightGray,
+                                        uncheckedTrackColor = Color.DarkGray
+                                    )
+                                )
+                            }
+
+                            if (autoSaveEnabled) {
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Save Interval Timer", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text("${autoSaveIntervalSeconds}s", color = Color(0xFF00FFCC), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Slider(
+                                        value = autoSaveIntervalSeconds.toFloat(),
+                                        onValueChange = { viewModel.updateAutoSaveInterval(it.toInt()) },
+                                        valueRange = 5f..60f,
+                                        steps = 10,
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = Color(0xFF00FFCC),
+                                            activeTrackColor = Color(0xFF00FFCC),
+                                            inactiveTrackColor = Color.DarkGray
+                                        )
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("5s (Rapid)", color = Color.Gray, fontSize = 9.sp)
+                                        Text("60s (Slow)", color = Color.Gray, fontSize = 9.sp)
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(color = Color(0xFF222B3A))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(if (autoSaveEnabled) Color(0xFF00FFCC) else Color.Red, CircleShape)
+                                )
+                                Text(
+                                    text = "Status: $autoSaveStatus",
+                                    color = Color.LightGray,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { showAutoSaveDialog = false }
+                        ) {
+                            Text("Done", color = Color(0xFFD4AF37), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                )
             }
         }
 
@@ -3237,3 +3573,40 @@ fun ToolboxHeightSelectorHeader(
         }
     }
 }
+
+@Composable
+fun VCardFieldToggleRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 2.dp)
+    ) {
+        Text(
+            text = label,
+            color = Color.LightGray,
+            fontSize = 11.sp,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = Color(0xFF00FFCC),
+                uncheckedColor = Color.Gray,
+                checkmarkColor = Color.Black
+            ),
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+

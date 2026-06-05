@@ -49,13 +49,14 @@ object GeminiService {
         category: String,
         preferredColor: String,
         preferredStyle: String,
+        brandDescription: String,
         logoUri: String?,
         photoUri: String?,
         callback: AIAssistantCallback
     ) {
         val apiKey = BuildConfig.GEMINI_API_KEY
         if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
-            simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
+            simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, brandDescription, callback)
             return
         }
 
@@ -63,10 +64,12 @@ object GeminiService {
         
         val systemInstruction = """
             You are a professional Graphic and Branding UI Designer with elite aesthetic sense.
-            Your task is to generate exactly 3 beautiful, distinct, high-end visiting card layout design proposals (as Option 1, Option 2, Option 3) matching the user's requirements.
-            Design 1 MUST match the user requested design style ($preferredStyle) and preferred color tone ($preferredColor).
-            Design 2 MUST be a luxury prestige signature gold variation with elegant serif typography.
-            Design 3 MUST be a futuristic high-tech neon accented minimal design.
+            Your task is to generate exactly 3 beautiful, distinct, high-end visiting card layout design proposals (as Option 1, Option 2, Option 3) matching the user's requirements and brand description.
+            The user provides a brief description of their brand: "$brandDescription". You MUST integrate details, vibes, and themes implied by this brand description into the generated options. Design professional card layouts and color schemes centered on this brand brief.
+
+            Design 1 MUST match the user requested design style ($preferredStyle) and preferred color tone ($preferredColor) while incorporating elements of the brand description ($brandDescription).
+            Design 2 MUST represent elite prestige branding based on the brand description ($brandDescription). Make this custom tailored to their brand vibe with high-end palettes (e.g., if brand is tea/nature, use forest greens or earthy clay; if it's fintech/wealth, use deep blue with cyber gold; if it's sweet treats, use pastel lavender & pink; if it's clean wellness, use soothing mint or teal, etc.).
+            Design 3 MUST be a futuristic high-tech neon accented minimal design or custom theme inspired uniquely by the brand description ($brandDescription).
 
             The fontStyle field must be exactly one of: "Space Grotesk", "Elegant Serif", "Modern Bold", or "Tech Clean".
 
@@ -120,6 +123,7 @@ object GeminiService {
             - Company: $companyName
             - Job Title: $jobTitle
             - Category: $category
+            - Brand Description: $brandDescription
             - Preferred Color: $preferredColor
             - Preferred Style: $preferredStyle
             - Has Custom Logo: ${if (logoUri != null) "Yes" else "No"}
@@ -158,14 +162,14 @@ object GeminiService {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "Network failure: ${e.message}", e)
-                simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
+                simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, brandDescription, callback)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val responseBody = response.body?.string() ?: ""
                 if (!response.isSuccessful) {
                     Log.e(TAG, "API failed: Code ${response.code}, Msg: $responseBody")
-                    simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
+                    simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, brandDescription, callback)
                     return
                 }
 
@@ -224,12 +228,12 @@ object GeminiService {
                     if (optionsList.isNotEmpty()) {
                         callback.onSuccess(optionsList)
                     } else {
-                        simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
+                        simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, brandDescription, callback)
                     }
 
                 } catch (e: Exception) {
                     Log.e(TAG, "JSON parsing error from Gemini response", e)
-                    simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, callback)
+                    simulateLocalAIGeneration(name, companyName, jobTitle, category, preferredColor, preferredStyle, brandDescription, callback)
                 }
             }
         })
@@ -242,6 +246,7 @@ object GeminiService {
         category: String,
         preferredColor: String,
         preferredStyle: String,
+        brandDescription: String,
         callback: AIAssistantCallback
     ) {
         val userColor = if (preferredColor.startsWith("#") && preferredColor.length == 7) {
@@ -272,39 +277,102 @@ object GeminiService {
             else -> "Space Grotesk"
         }
 
+        var localColor1 = userColor
+        var localBg1 = "#0F121F"
+        var localBgEnd1 = "#1F2943"
+        var localThemeName1 = "AI Preferred $preferredStyle Theme"
+        var localFont1 = fontOption1
+
+        var localColor2 = "#D4AF37"
+        var localBg2 = "#0A0A0C"
+        var localBgEnd2 = "#1B170B"
+        var localThemeName2 = "AI Golden Luxury Elite"
+        var localFont2 = "Elegant Serif"
+
+        var localColor3 = "#00FFCC"
+        var localBg3 = "#03060C"
+        var localBgEnd3 = "#0B2135"
+        var localThemeName3 = "AI Cyber Tech Minimalist"
+        var localFont3 = "Tech Clean"
+
+        val descLower = brandDescription.lowercase()
+        if (descLower.contains("organic") || descLower.contains("eco") || descLower.contains("nature") || descLower.contains("green") || descLower.contains("tea") || descLower.contains("coffee") || descLower.contains("garden")) {
+            localColor1 = "#2ECC71" // Emerald
+            localBg1 = "#0E1A14"
+            localBgEnd1 = "#1B3327"
+            localThemeName1 = "Dynamic Organic Garden"
+            localFont1 = "Space Grotesk"
+
+            localColor2 = "#8D6E63" // Coffee/Earthy Brown
+            localBg2 = "#15100E"
+            localBgEnd2 = "#2E1F1A"
+            localThemeName2 = "Warm Roasted Prestige"
+            localFont2 = "Elegant Serif"
+        } else if (descLower.contains("cyber") || descLower.contains("tech") || descLower.contains("ai") || descLower.contains("crypt") || descLower.contains("software") || descLower.contains("digital") || descLower.contains("app")) {
+            localColor1 = "#00E5FF" // Cool Cyan
+            localBg1 = "#060A13"
+            localBgEnd1 = "#0D182E"
+            localThemeName1 = "AI Cognitive Matrix"
+            localFont1 = "Tech Clean"
+
+            localColor2 = "#D4AF37"
+            localBg2 = "#110D05"
+            localBgEnd2 = "#261D0A"
+            localThemeName2 = "Elite FinTech Premium"
+            localFont2 = "Elegant Serif"
+        } else if (descLower.contains("health") || descLower.contains("doctor") || descLower.contains("clinic") || descLower.contains("medical") || descLower.contains("dentist") || descLower.contains("physio") || descLower.contains("care")) {
+            localColor1 = "#00B8D4" // Clean Teal
+            localBg1 = "#061313"
+            localBgEnd1 = "#0E2B2B"
+            localThemeName1 = "Clinical WellCare"
+            localFont1 = "Modern Bold"
+        } else if (descLower.contains("art") || descLower.contains("design") || descLower.contains("fashion") || descLower.contains("creative") || descLower.contains("music") || descLower.contains("beauty") || descLower.contains("styl")) {
+            localColor1 = "#FF4081" // Vibrant Pink
+            localBg1 = "#1A0510"
+            localBgEnd1 = "#3D0C26"
+            localThemeName1 = "Avant-Garde Studio"
+            localFont1 = "Space Grotesk"
+
+            localColor3 = "#E040FB" // Neon Purple
+            localBg3 = "#100015"
+            localBgEnd3 = "#260033"
+            localThemeName3 = "Synthwave Neon Edge"
+            localFont3 = "Tech Clean"
+        }
+
         // Option 1
         list.add(CardDesignOption(
-            themeName = "AI Preferred $preferredStyle",
-            backgroundColor = "#0F121F",
-            gradientEndColor = "#1F2943",
-            primaryColor = userColor,
-            fontStyle = fontOption1,
+            themeName = localThemeName1,
+            backgroundColor = localBg1,
+            gradientEndColor = localBgEnd1,
+            primaryColor = localColor1,
+            fontStyle = localFont1,
             qrCodeVisible = true,
             qrX = 240f,
             qrY = 110f,
             visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address")
         ))
 
-        // Option 2: Luxury Gold Accent Elite
+        // Option 2
         list.add(CardDesignOption(
-            themeName = "AI Golden Luxury Elite",
-            backgroundColor = "#0A0A0C",
-            gradientEndColor = "#1B170B",
-            primaryColor = "#D4AF37",
-            fontStyle = "Elegant Serif",
+            themeName = localThemeName2,
+            backgroundColor = localBg2,
+            gradientEndColor = localBgEnd2,
+            primaryColor = localColor2,
+            fontStyle = localFont2,
             qrCodeVisible = true,
             qrX = 240f,
             qrY = 110f,
             visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address")
         ))
 
-        // Option 3: Cyber Tech Futuristic
+        // Option 3
         list.add(CardDesignOption(
-            themeName = "AI Cyber Tech Minimalist",
-            backgroundColor = "#03060C",
-            gradientEndColor = "#0B2135",
-            primaryColor = "#00FFCC",
-            fontStyle = "Tech Clean",
+            themeName = localThemeName3,
+            backgroundColor = localBg3,
+            gradientEndColor = localBgEnd3,
+            primaryColor = localColor3,
+            fontStyle = localFont3,
             qrCodeVisible = true,
             qrX = 242f,
             qrY = 108f,

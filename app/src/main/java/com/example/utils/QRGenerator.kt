@@ -19,6 +19,58 @@ import com.google.zxing.common.HybridBinarizer
 import kotlin.math.abs
 
 object QRGenerator {
+
+    // Generates standard vCard contact card text from individual metadata
+    fun generateVCard(
+        fullName: String,
+        jobTitle: String,
+        companyName: String,
+        phoneNumber: String,
+        email: String,
+        website: String,
+        address: String
+    ): String {
+        return buildString {
+            append("BEGIN:VCARD\n")
+            append("VERSION:3.0\n")
+            
+            val trimmedName = fullName.trim()
+            val spaceIndex = trimmedName.lastIndexOf(' ')
+            if (spaceIndex != -1) {
+                val firstName = trimmedName.substring(0, spaceIndex).trim()
+                val lastName = trimmedName.substring(spaceIndex + 1).trim()
+                append("N:$lastName;$firstName;;;\n")
+            } else {
+                append("N:;$trimmedName;;;\n")
+            }
+            append("FN:$trimmedName\n")
+            
+            if (jobTitle.trim().isNotEmpty()) {
+                append("TITLE:${jobTitle.trim()}\n")
+            }
+            if (companyName.trim().isNotEmpty()) {
+                append("ORG:${companyName.trim()}\n")
+            }
+            if (phoneNumber.trim().isNotEmpty()) {
+                append("TEL;TYPE=CELL:${phoneNumber.trim()}\n")
+            }
+            if (email.trim().isNotEmpty()) {
+                append("EMAIL;TYPE=PREF,INTERNET:${email.trim()}\n")
+            }
+            if (website.trim().isNotEmpty()) {
+                val formattedWeb = if (!website.startsWith("http://") && !website.startsWith("https://")) {
+                    "http://$website"
+                } else {
+                    website
+                }
+                append("URL:$formattedWeb\n")
+            }
+            if (address.trim().isNotEmpty()) {
+                append("ADR;TYPE=WORK:;;${address.trim()}\n")
+            }
+            append("END:VCARD")
+        }
+    }
     
     // Tries to decode a QR Code from a Bitmap. Returns the text of the QR code if successful.
     fun decodeQRCodeFromBitmap(bitmap: Bitmap): String {

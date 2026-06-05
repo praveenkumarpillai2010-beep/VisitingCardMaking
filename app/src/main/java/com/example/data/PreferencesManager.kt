@@ -129,6 +129,19 @@ class PreferencesManager(context: Context) {
         get() = prefs.getInt(KEY_AI_GENERATIONS_COUNT, 0)
         set(value) = prefs.edit().putInt(KEY_AI_GENERATIONS_COUNT, value).apply()
 
+    // TEMPLATES & FAVORITES PERSISTENCE
+    var favoriteTemplates: String
+        get() = prefs.getString("favorite_templates", "") ?: ""
+        set(value) = prefs.edit().putString("favorite_templates", value).apply()
+
+    var recentTemplates: String
+        get() = prefs.getString("recent_templates", "") ?: ""
+        set(value) = prefs.edit().putString("recent_templates", value).apply()
+
+    var customTemplatesJson: String
+        get() = prefs.getString("custom_templates_json", "[]") ?: "[]"
+        set(value) = prefs.edit().putString("custom_templates_json", value).apply()
+
     // CLEAR ALL FOR SIGN OUT
     fun clearAuth() {
         prefs.edit()

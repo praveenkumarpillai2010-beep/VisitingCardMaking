@@ -34,17 +34,20 @@ object PDFExporter {
         }
     }
 
-    // Main draw routine to render a UserCard to an Android Bitmap
-    fun drawCardToBitmap(context: Context, card: UserCard, quality: String): Bitmap {
-        val (width, height) = getDimensions(quality)
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-
+    // Generic routine to draw a UserCard onto any provided canvas (Bitmap or Vector PDF canvas)
+    fun drawCardOnSpecificCanvas(
+        context: Context,
+        card: UserCard,
+        canvas: Canvas,
+        width: Int,
+        height: Int,
+        isVectorPdf: Boolean = false
+    ) {
         // Scale factors for translating coordinates from original design scale (400x240 units)
         val scaleX = width / 400f
         val scaleY = height / 240f
 
-        // 1. Draw Background
+        // 1. Draw Background (unless we need to bleed or separate bg drawing)
         val bgPaint = Paint().apply { isAntiAlias = true }
         if (card.backgroundType == "GRADIENT") {
             val startColor = try { Color.parseColor(card.backgroundColor) } catch (e: Exception) { Color.parseColor("#10121A") }
@@ -108,6 +111,14 @@ object PDFExporter {
 
         val primaryColorInt = try { Color.parseColor(card.qrCodeColor) } catch (e: Exception) { Color.parseColor("#D4AF37") }
 
+        // Resolve matching typography/typeface for professional printing output matching the user's design setup
+        val typefaceToUse = when (card.fontStyle) {
+            "Elegant Serif" -> Typeface.SERIF
+            "Tech Clean" -> Typeface.MONOSPACE
+            "Space Grotesk" -> Typeface.SANS_SERIF
+            else -> Typeface.DEFAULT
+        }
+
         // Compile layers to draw in strict Z-Index order
         val layers = mutableListOf<ExportLayer>()
 
@@ -116,7 +127,7 @@ object PDFExporter {
                 textPaint.apply {
                     color = Color.WHITE
                     textSize = card.fullNameSize * sY * card.fullNameScale
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    typeface = Typeface.create(typefaceToUse, Typeface.BOLD)
                 }
                 val x = card.fullNameX * sX
                 val y = card.fullNameY * sY
@@ -132,7 +143,7 @@ object PDFExporter {
                 textPaint.apply {
                     color = primaryColorInt
                     textSize = card.jobTitleSize * sY * card.jobTitleScale
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                    typeface = Typeface.create(typefaceToUse, Typeface.NORMAL)
                 }
                 val x = card.jobTitleX * sX
                 val y = card.jobTitleY * sY
@@ -148,7 +159,7 @@ object PDFExporter {
                 textPaint.apply {
                     color = Color.LTGRAY
                     textSize = card.companyNameSize * sY * card.companyNameScale
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    typeface = Typeface.create(typefaceToUse, Typeface.BOLD)
                 }
                 val x = card.companyNameX * sX
                 val y = card.companyNameY * sY
@@ -164,7 +175,7 @@ object PDFExporter {
                 textPaint.apply {
                     color = Color.WHITE
                     textSize = card.mobileNumberSize * sY * card.mobileNumberScale
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                    typeface = Typeface.create(typefaceToUse, Typeface.NORMAL)
                 }
                 val x = card.mobileNumberX * sX
                 val y = card.mobileNumberY * sY
@@ -180,7 +191,7 @@ object PDFExporter {
                 textPaint.apply {
                     color = Color.WHITE
                     textSize = card.emailSize * sY * card.emailScale
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                    typeface = Typeface.create(typefaceToUse, Typeface.NORMAL)
                 }
                 val x = card.emailX * sX
                 val y = card.emailY * sY
@@ -196,7 +207,7 @@ object PDFExporter {
                 textPaint.apply {
                     color = Color.WHITE
                     textSize = card.websiteSize * sY * card.websiteScale
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                    typeface = Typeface.create(typefaceToUse, Typeface.NORMAL)
                 }
                 val x = card.websiteX * sX
                 val y = card.websiteY * sY
@@ -212,7 +223,7 @@ object PDFExporter {
                 textPaint.apply {
                     color = Color.WHITE
                     textSize = card.addressSize * sY * card.addressScale
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                    typeface = Typeface.create(typefaceToUse, Typeface.NORMAL)
                 }
                 val x = card.addressX * sX
                 val y = card.addressY * sY
@@ -324,7 +335,7 @@ object PDFExporter {
             layer.draw(canvas, scaleX, scaleY)
         }
 
-        // 6. Draw Watermark if account type is free
+        // Draw Watermark if account type is free
         if (!card.isPremium) {
             val waterPaint = Paint().apply {
                 isAntiAlias = true
@@ -334,7 +345,14 @@ object PDFExporter {
             }
             canvas.drawText("Made by Pillai\'Play Card Maker", 25f * scaleX, height - 15f * scaleY, waterPaint)
         }
+    }
 
+    // Main draw routine to render a UserCard to an Android Bitmap
+    fun drawCardToBitmap(context: Context, card: UserCard, quality: String): Bitmap {
+        val (width, height) = getDimensions(quality)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawCardOnSpecificCanvas(context, card, canvas, width, height, isVectorPdf = false)
         return bitmap
     }
 
@@ -436,12 +454,74 @@ object PDFExporter {
         return array.toString()
     }
 
+    private fun drawCropMarks(
+        canvas: Canvas,
+        totalWidth: Int,
+        totalHeight: Int,
+        bleedX: Float,
+        bleedY: Float,
+        cardWidth: Int,
+        cardHeight: Int
+    ) {
+        val paint = Paint().apply {
+            isAntiAlias = true
+            color = Color.BLACK
+            style = Paint.Style.STROKE
+            strokeWidth = 2.5f
+        }
+        
+        val shadowPaint = Paint().apply {
+            isAntiAlias = true
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = 1f
+        }
+
+        val markLen = cardWidth * 0.045f
+        val offset = cardWidth * 0.015f // margin before marker starts
+
+        fun drawLMark(cx: Float, cy: Float, dirX: Float, dirY: Float) {
+            val xStartH = if (dirX > 0) cx - offset - markLen else cx + offset + markLen
+            val xEndH = if (dirX > 0) cx - offset else cx + offset
+            
+            val yStartV = if (dirY > 0) cy - offset - markLen else cy + offset + markLen
+            val yEndV = if (dirY > 0) cy - offset else cy + offset
+
+            // Shadow underlay for white/dark background compatibility
+            canvas.drawLine(xStartH, cy, xEndH, cy, shadowPaint)
+            canvas.drawLine(cx, yStartV, cx, yEndV, shadowPaint)
+
+            canvas.drawLine(xStartH, cy, xEndH, cy, paint)
+            canvas.drawLine(cx, yStartV, cx, yEndV, paint)
+        }
+
+        // Top-Left trim point
+        drawLMark(bleedX, bleedY, 1f, 1f)
+        // Top-Right trim point
+        drawLMark(bleedX + cardWidth, bleedY, -1f, 1f)
+        // Bottom-Left trim point
+        drawLMark(bleedX, bleedY + cardHeight, 1f, -1f)
+        // Bottom-Right trim point
+        drawLMark(bleedX + cardWidth, bleedY + cardHeight, -1f, -1f)
+
+        // Draw a light dashed guideline connecting corner crop marks for hand cutting/scissors trim
+        val dashedPaint = Paint().apply {
+            isAntiAlias = true
+            color = Color.argb(60, 128, 128, 128)
+            style = Paint.Style.STROKE
+            strokeWidth = 1.0f
+            pathEffect = DashPathEffect(floatArrayOf(10f, 15f), 0f)
+        }
+        canvas.drawRect(bleedX, bleedY, bleedX + cardWidth, bleedY + cardHeight, dashedPaint)
+    }
+
     // MAIN FILE WRITER
     fun exportCardToFile(
         context: Context,
         card: UserCard,
         format: String, // "PNG", "JPG", "PDF"
-        quality: String // "STANDARD", "HD", "ULTRA HD"
+        quality: String, // "STANDARD", "HD", "ULTRA HD"
+        includeBleedAndCropMarks: Boolean = false
     ): File? {
         val bitmap = drawCardToBitmap(context, card, quality)
         val timestamp = System.currentTimeMillis()
@@ -455,12 +535,62 @@ object PDFExporter {
                 try {
                     val pdfDocument = PdfDocument()
                     val (w, h) = getDimensions(quality)
-                    val pageInfo = PdfDocument.PageInfo.Builder(w, h, 1).create()
-                    val page = pdfDocument.startPage(pageInfo)
                     
-                    page.canvas.drawBitmap(bitmap, 0f, 0f, null)
+                    val finalW: Int
+                    val finalH: Int
+                    val dx: Float
+                    val dy: Float
+                    
+                    if (includeBleedAndCropMarks) {
+                        // Expand canvas with 8% bleed margins on all sides to contain background extension & crop marks
+                        val bleedX = (w * 0.08f).toInt()
+                        val bleedY = (h * 0.08f).toInt()
+                        finalW = w + 2 * bleedX
+                        finalH = h + 2 * bleedY
+                        dx = bleedX.toFloat()
+                        dy = bleedY.toFloat()
+                    } else {
+                        finalW = w
+                        finalH = h
+                        dx = 0f
+                        dy = 0f
+                    }
+                    
+                    val pageInfo = PdfDocument.PageInfo.Builder(finalW, finalH, 1).create()
+                    val page = pdfDocument.startPage(pageInfo)
+                    val pdfCanvas = page.canvas
+                    
+                    if (includeBleedAndCropMarks) {
+                        // 1. Fill full page area with background to support trim bleeds
+                        val bgPaint = Paint().apply { isAntiAlias = true }
+                        if (card.backgroundType == "GRADIENT") {
+                            val startColor = try { Color.parseColor(card.backgroundColor) } catch (e: Exception) { Color.parseColor("#10121A") }
+                            val endColor = try { Color.parseColor(card.gradientEndColor) } catch (e: Exception) { Color.parseColor("#1E2130") }
+                            bgPaint.shader = LinearGradient(
+                                0f, 0f, finalW.toFloat(), finalH.toFloat(),
+                                startColor, endColor, Shader.TileMode.CLAMP
+                            )
+                            pdfCanvas.drawRect(0f, 0f, finalW.toFloat(), finalH.toFloat(), bgPaint)
+                        } else {
+                            val sColor = try { Color.parseColor(card.backgroundColor) } catch (e: Exception) { Color.parseColor("#10121A") }
+                            pdfCanvas.drawColor(sColor)
+                        }
+                        
+                        // 2. Draw card contents shifted into the safe trim section
+                        pdfCanvas.save()
+                        pdfCanvas.translate(dx, dy)
+                        // Make sure we draw custom design elements & vector card text hierarchy matching fonts perfectly 
+                        drawCardOnSpecificCanvas(context, card, pdfCanvas, w, h, isVectorPdf = true)
+                        pdfCanvas.restore()
+                        
+                        // 3. Render alignment trim crop marks
+                        drawCropMarks(pdfCanvas, finalW, finalH, dx, dy, w, h)
+                    } else {
+                        // Standard true print-vector PDF output
+                        drawCardOnSpecificCanvas(context, card, pdfCanvas, w, h, isVectorPdf = true)
+                    }
+                    
                     pdfDocument.finishPage(page)
-
                     FileOutputStream(file).use { out ->
                         pdfDocument.writeTo(out)
                     }

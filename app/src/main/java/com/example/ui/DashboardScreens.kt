@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.UserCard
 import com.example.viewmodel.CardViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -68,34 +69,39 @@ data class TemplatePreset(
 
 val cardTemplates = listOf(
     // 1. Luxury & Business (Premium Gold and Black Accents)
-    TemplatePreset("vibe_modern_gold", "Platinum Gold Luxury", "Business", true, "#10121A", "#1D1305", "#D4AF37", "MINIMAL_GOLD", "Elegant Serif"),
-    TemplatePreset("vibe_biz_black", "Midnight Executive", "Business", true, "#050508", "#12121A", "#FFFFFF", "MODERN_DOUBLE", "Modern Bold"),
+    TemplatePreset("vibe_modern_gold", "Platinum Gold Luxury", "Luxury", false, "#10121A", "#1D1305", "#D4AF37", "MINIMAL_GOLD", "Elegant Serif"),
+    TemplatePreset("vibe_luxury_emerald", "Emerald Gold Luxe", "Luxury", false, "#0A241F", "#03110E", "#E6B522", "MINIMAL_GOLD", "Elegant Serif"),
+    TemplatePreset("vibe_luxe_sapphire", "Royal Blue Platinum", "Luxury", false, "#030F26", "#0D1B3E", "#E2E8F0", "MODERN_DOUBLE", "Modern Bold"),
+    TemplatePreset("vibe_biz_black", "Midnight Executive", "Business", false, "#050508", "#12121A", "#FFFFFF", "MODERN_DOUBLE", "Modern Bold"),
     TemplatePreset("vibe_biz_metro", "Metropolitan Business", "Business", false, "#1C1C1F", "#0B1D28", "#A4B5C4", "MINIMAL_GOLD", "Space Grotesk"),
     TemplatePreset("vibe_biz_ocean", "Sapphire Professional", "Business", false, "#0A1E31", "#050914", "#5BB7FF", "MINIMAL_GOLD", "Modern Bold"),
 
     // 2. Corporate (Deep professional colors and formal typography)
     TemplatePreset("vibe_corp_classic", "Classic Corporate", "Corporate", false, "#0D1117", "#161B22", "#58A6FF", "MINIMAL_GOLD", "Space Grotesk"),
-    TemplatePreset("vibe_corp_elite", "Elite Executive Blue", "Corporate", true, "#040D21", "#0B132B", "#00FFCC", "MODERN_DOUBLE", "Elegant Serif"),
-    TemplatePreset("vibe_corp_grey", "Steel Corporate", "Corporate", false, "#1E2022", "#2B2E31", "#E5D9C4", "MINIMAL_GOLD", "Tech Clean"),
+    TemplatePreset("vibe_corp_elite", "Elite Executive Blue", "Corporate", false, "#040D21", "#0B132B", "#00FFCC", "MODERN_DOUBLE", "Elegant Serif"),
+    TemplatePreset("vibe_corp_grey", "Steel Corporate", "Corporate", false, "#1E2022", "#2B2E31", "#E5D9C4", "MINIMAL_GOLD", "Space Grotesk"),
 
     // 3. Technology (Cyberpunk themes, matrix digital green, deep charcoal)
-    TemplatePreset("vibe_tech_cyber", "Cyber Sleek Neon", "Technology", true, "#050811", "#0D1E2D", "#00FFCC", "CYBER_SLATE", "Tech Clean"),
-    TemplatePreset("vibe_tech_ai", "Cognitive AI Purple", "Technology", true, "#0F0B29", "#1D0531", "#C77DFF", "CYBER_SLATE", "Tech Clean"),
+    TemplatePreset("vibe_tech_cyber", "Cyber Sleek Neon", "Technology", false, "#050811", "#0D1E2D", "#00FFCC", "CYBER_SLATE", "Tech Clean"),
+    TemplatePreset("vibe_cyber_orange", "Cyberpunk Amber Glow", "Technology", false, "#120902", "#241103", "#FF8C00", "CYBER_SLATE", "Space Grotesk"),
+    TemplatePreset("vibe_tech_ai", "Cognitive AI Purple", "Technology", false, "#0F0B29", "#1D0531", "#C77DFF", "CYBER_SLATE", "Tech Clean"),
     TemplatePreset("vibe_tech_matrix", "Matrix Digital Green", "Technology", false, "#040F0A", "#081E15", "#39FF14", "CYBER_SLATE", "Tech Clean"),
 
     // 4. Real Estate (Premium tones, golds, rich browns, warm sand)
-    TemplatePreset("vibe_real_estate", "Luxury Real Estate", "Real Estate", true, "#141518", "#221C16", "#CBB26A", "MODERN_DOUBLE", "Elegant Serif"),
+    TemplatePreset("vibe_real_estate", "Luxury Real Estate", "Real Estate", false, "#141518", "#221C16", "#CBB26A", "MODERN_DOUBLE", "Elegant Serif"),
     TemplatePreset("vibe_estate_modern", "Metro Skyline", "Real Estate", false, "#121A21", "#1E2A38", "#F5CE62", "MINIMAL_GOLD", "Space Grotesk"),
     TemplatePreset("vibe_estate_timber", "Oak Wood Property", "Real Estate", false, "#1F1A15", "#2C2219", "#E6A15C", "MODERN_DOUBLE", "Elegant Serif"),
 
     // 5. Creative (Vivid gradients, active colors, glowing retro accents)
     TemplatePreset("vibe_creative_crimson", "Creative Sunset", "Creative", false, "#1C0407", "#2D0A14", "#FF3366", "MODERN_DOUBLE", "Space Grotesk"),
+    TemplatePreset("vibe_creative_aurora", "Aurora Vivid Gradient", "Creative", false, "#0F2027", "#2C5364", "#00FFCC", "CYBER_SLATE", "Tech Clean"),
     TemplatePreset("vibe_creative_retro", "Retro Sunset", "Creative", false, "#2B1605", "#421C00", "#FFAC1C", "MODERN_DOUBLE", "Modern Bold"),
-    TemplatePreset("vibe_creative_neon", "Vaporwave Aesthetic", "Creative", true, "#230A2E", "#510E5F", "#FF00FF", "CYBER_SLATE", "Tech Clean"),
+    TemplatePreset("vibe_creative_neon", "Vaporwave Aesthetic", "Creative", false, "#230A2E", "#510E5F", "#FF00FF", "CYBER_SLATE", "Tech Clean"),
 
     // 6. Medical (Clinical greens, doctor cyans, clean medical borders)
     TemplatePreset("vibe_medical_clean", "Clinical Blue-Green", "Medical", false, "#0A221C", "#144D3F", "#48CAE4", "MINIMAL_GOLD", "Tech Clean"),
-    TemplatePreset("vibe_medical_dentist", "Dental Pure Teal", "Medical", true, "#0B262A", "#133C40", "#00F5FF", "MINIMAL_GOLD", "Modern Bold"),
+    TemplatePreset("vibe_medical_dentist", "Dental Pure Teal", "Medical", false, "#0B262A", "#133C40", "#00F5FF", "MINIMAL_GOLD", "Modern Bold"),
+    TemplatePreset("vibe_medical_pink", "Pediatric Soft Lavender", "Medical", false, "#1E1B2C", "#2F2A44", "#F472B6", "MODERN_DOUBLE", "Elegant Serif"),
     TemplatePreset("vibe_medical_cardio", "Cardiologist Crimson", "Medical", false, "#26060A", "#45090F", "#FF6B6B", "MODERN_DOUBLE", "Space Grotesk"),
 
     // 7. Education (Academic blue, scholar royal, math physics clean layouts)
@@ -131,7 +137,7 @@ fun DashboardScreens(
         bottomBar = {
             if (viewModel.prefs.bannerAdEnabled && !isPremium) {
                 BannerAdView(
-                    adUnitId = ""
+                    adUnitId = "ca-app-pub-5487081756225733/3150766346"
                 )
             }
         },
@@ -891,53 +897,7 @@ fun DashboardView(
                 }
             }
 
-            // UPGRADE TO PREMIUM BANNER CTA
-            if (!isPremium) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFF8E6B1D), Color(0xFFC0993C), Color(0xFFD4AF37))
-                            )
-                        )
-                        .clickable { onNavigate(ActiveScreen.PREMIUM) }
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.weight(0.7f)) {
-                            Text(
-                                text = "Unleash Full AI Creative Suite",
-                                color = Color.Black,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Unlock unlimited saves, customize background images, watch premium previews, and remove watermark exports.",
-                                color = Color.Black.copy(0.8f),
-                                fontSize = 11.sp,
-                                lineHeight = 15.sp,
-                                modifier = Modifier.padding(top = 2.dp)
-                            )
-                        }
-                        Button(
-                            onClick = { onNavigate(ActiveScreen.PREMIUM) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                            modifier = Modifier.weight(0.3f)
-                        ) {
-                            Text("UPGRADE", color = Color(0xFFD4AF37), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-            }
+
 
             // MAIN GRID SELECTIONS / QUICK ACTIONS
             Column(
@@ -987,13 +947,13 @@ fun DashboardView(
                     }
 
                     DashboardActionItem(
-                        title = "VIP Studio",
-                        sub = "Membership benefits",
-                        icon = Icons.Default.Star,
-                        color = Color(0xFF00FFCC),
+                        title = "App Settings",
+                        sub = "Configure templates",
+                        icon = Icons.Default.Settings,
+                        color = Color(0xFFA4B5C4),
                         modifier = Modifier.weight(1f)
                     ) {
-                        onNavigate(ActiveScreen.PREMIUM)
+                        onNavigate(ActiveScreen.SETTINGS)
                     }
                 }
             }
@@ -1019,7 +979,7 @@ fun DashboardView(
                         .padding(horizontal = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val popularSelection = cardTemplates.filter { it.isPremium || it.category == "Creative" || it.id.contains("gold") || it.id.contains("cyber") }.take(6)
+                    val popularSelection = cardTemplates.filter { it.category == "Creative" || it.id.contains("gold") || it.id.contains("cyber") }.take(6)
                     popularSelection.forEach { preset ->
                         Box(
                             modifier = Modifier
@@ -1035,18 +995,13 @@ fun DashboardView(
                                 )
                                 .border(
                                     width = 1.dp,
-                                    color = if (preset.isPremium) Color(0xFFD4AF37).copy(0.4f) else Color.DarkGray,
+                                    color = Color.DarkGray,
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .clickable {
-                                    if (preset.isPremium && !isPremium) {
-                                        Toast.makeText(context, "Premium template! Available on VIP memberships.", Toast.LENGTH_SHORT).show()
-                                        onNavigate(ActiveScreen.PREMIUM)
-                                    } else {
-                                        selectedPresetToCreate = preset
-                                        newCardNameInput = "Design ${preset.name}"
-                                        showCreatePopup = true
-                                    }
+                                    selectedPresetToCreate = preset
+                                    newCardNameInput = "Design ${preset.name}"
+                                    showCreatePopup = true
                                 }
                                 .padding(12.dp)
                         ) {
@@ -1060,22 +1015,12 @@ fun DashboardView(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    if (preset.isPremium) {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(Color(0xFFD4AF37), RoundedCornerShape(4.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text("PREMIUM", color = Color.Black, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                                        }
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(Color(0xFF00FFCC).copy(0.2f), RoundedCornerShape(4.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text("FREE", color = Color(0xFF00FFCC), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                                        }
+                                    Box(
+                                        modifier = Modifier
+                                            .background(Color(0xFF00FFCC).copy(0.2f), RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("FREE", color = Color(0xFF00FFCC), fontSize = 8.sp, fontWeight = FontWeight.Black)
                                     }
                                     Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White.copy(0.7f), modifier = Modifier.size(14.dp))
                                 }
@@ -1087,12 +1032,12 @@ fun DashboardView(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // RECENT DESIGNS LIST
+            // MY CUSTOM DESIGNS LIST
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp)
             ) {
                 Text(
-                    text = "RECENT CREATED PROJECTS (${cards.size})",
+                    text = "MY CUSTOM DESIGNS (${cards.size})",
                     color = Color.LightGray,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
@@ -1110,7 +1055,7 @@ fun DashboardView(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.List, contentDescription = null, modifier = Modifier.size(44.dp), tint = Color.DarkGray)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("No projects yet", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("No designs saved", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             Text("Click + or manual design to create your first business card!", color = Color.Gray, fontSize = 10.sp)
                         }
                     }
@@ -1124,7 +1069,8 @@ fun DashboardView(
                                     onOpenEditor()
                                 },
                                 onDuplicate = { viewModel.duplicateCard(card) },
-                                onDelete = { viewModel.deleteCard(card) }
+                                onDelete = { viewModel.deleteCard(card) },
+                                viewModel = viewModel
                             )
                         }
                     }
@@ -1240,12 +1186,19 @@ fun SavedProjectRowItem(
     card: UserCard,
     onEdit: () -> Unit,
     onDuplicate: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    viewModel: CardViewModel
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameInput by remember { mutableStateOf(card.cardName) }
+    var isExporting by remember { mutableStateOf(false) }
+
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+        color = Color(0xFF131722),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, Color(0xFF222B3A)),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onEdit() }
@@ -1257,33 +1210,217 @@ fun SavedProjectRowItem(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(0.7f)
+                modifier = Modifier.weight(0.6f)
             ) {
+                // Miniature visual thumbnail preview representing the layout
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .background(Color(android.graphics.Color.parseColor(card.backgroundColor)), RoundedCornerShape(6.dp))
-                )
+                        .size(width = 68.dp, height = 41.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(
+                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                listOf(
+                                    try { Color(android.graphics.Color.parseColor(card.backgroundColor)) } catch(e: Exception) { Color(0xFF10121A) },
+                                    try { Color(android.graphics.Color.parseColor(card.gradientEndColor)) } catch(e: Exception) { Color(0xFF1E2130) }
+                                )
+                            )
+                        )
+                        .border(
+                            width = 0.5.dp, 
+                            color = try { Color(android.graphics.Color.parseColor(card.qrCodeColor)).copy(alpha = 0.5f) } catch(e: Exception) { Color(0xFFD4AF37).copy(alpha = 0.5f) },
+                            shape = RoundedCornerShape(3.dp)
+                        )
+                ) {
+                    val scaleX = 68f / 400f
+                    val scaleY = 41f / 240f
+
+                    // QR code miniature
+                    if (card.qrCodeVisible) {
+                        Box(
+                            modifier = Modifier
+                                .offset(
+                                    x = (card.qrCodeX * scaleX).dp,
+                                    y = (card.qrCodeY * scaleY).dp
+                                )
+                                .size((card.qrCodeSize * scaleX).dp)
+                                .background(
+                                    try { Color(android.graphics.Color.parseColor(card.qrCodeColor)).copy(0.7f) } catch(e: Exception) { Color.White.copy(0.7f) },
+                                    RoundedCornerShape(1.dp)
+                                )
+                        )
+                    }
+
+                    // Content lines miniature offset
+                    Box(
+                        modifier = Modifier
+                            .offset(
+                                x = (card.fullNameX * scaleX).dp,
+                                y = (card.fullNameY * scaleY).dp
+                            )
+                            .width(22.dp)
+                            .height(2.5.dp)
+                            .background(Color.White)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .offset(
+                                x = (card.jobTitleX * scaleX).dp,
+                                y = (card.jobTitleY * scaleY).dp
+                            )
+                            .width(14.dp)
+                            .height(1.5.dp)
+                            .background(Color.White.copy(0.6f))
+                    )
+                }
+
                 Spacer(modifier = Modifier.width(12.dp))
+
                 Column {
-                    Text(card.cardName, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(card.themeName, color = Color(android.graphics.Color.parseColor(card.qrCodeColor)), fontSize = 11.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = card.cardName,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Rename",
+                            tint = Color(0xFFD4AF37),
+                            modifier = Modifier
+                                .size(11.dp)
+                                .clickable { showRenameDialog = true }
+                        )
+                    }
+                    Text(
+                        text = card.themeName, 
+                        color = try { Color(android.graphics.Color.parseColor(card.qrCodeColor)) } catch(e: Exception) { Color(0xFFD4AF37) },
+                        fontSize = 10.sp
+                    )
                 }
             }
 
+            // Beautiful Action button row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                horizontalArrangement = Arrangement.spacedBy(1.dp)
             ) {
+                // Edit / Customize button
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Card",
+                        tint = Color(0xFF00FFCC),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                // Copy / Duplicate button
                 IconButton(onClick = onDuplicate) {
-                    Icon(Icons.Default.Share, contentDescription = "Duplicate", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Duplicate Card",
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
+
+                // Export / Share PDF button
+                IconButton(
+                    onClick = {
+                        if (!isExporting) {
+                            isExporting = true
+                            coroutineScope.launch {
+                                try {
+                                    val exportedFile = com.example.utils.PDFExporter.exportCardToFile(
+                                        context, card, "PDF", "HD", false
+                                    )
+                                    if (exportedFile != null) {
+                                        triggerSystemShare(context, exportedFile, "PDF")
+                                    } else {
+                                        Toast.makeText(context, "Failed to compile card export", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Export error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isExporting = false
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    if (isExporting) {
+                        CircularProgressIndicator(
+                            color = Color(0xFFD4AF37),
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 1.5.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = "Export Card",
+                            tint = Color.LightGray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Delete button
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252))
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color(0xFFFF5252),
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
-                Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
             }
         }
+    }
+
+    // Direct Inline Rename Popup
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = {
+                Text("Rename Design", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            },
+            text = {
+                OutlinedTextField(
+                    value = renameInput,
+                    onValueChange = { renameInput = it },
+                    label = { Text("Design Name") },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLabelColor = Color(0xFFD4AF37)
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (renameInput.isNotEmpty()) {
+                            viewModel.updateCardInDatabase(card.copy(cardName = renameInput))
+                            showRenameDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37))
+                ) {
+                    Text("Rename", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF131722)
+        )
     }
 }
 
@@ -1298,12 +1435,39 @@ fun TemplatesView(
     val isPremium by viewModel.isUserPremium.collectAsState()
     var selectedCategory by remember { mutableStateOf("All") }
 
-    val categories = listOf("All", "Luxury", "Minimal", "Technology", "Medical", "Real Estate", "Education")
+    val categories = listOf(
+        "All", "Favorites", "Recently Used", "My Templates",
+        "Business", "Corporate", "Luxury", "Technology", "Real Estate",
+        "Creative", "Medical", "Education", "Modern Minimalist"
+    )
 
-    val filteredPresets = if (selectedCategory == "All") {
-        cardTemplates
-    } else {
-        cardTemplates.filter { it.category == selectedCategory }
+    val favoriteIds by viewModel.favoriteTemplatesList.collectAsState()
+    val recentIds by viewModel.recentTemplatesList.collectAsState()
+    val customTemplates by viewModel.customTemplatesList.collectAsState()
+
+    val convertedCustoms = customTemplates.map { card ->
+        TemplatePreset(
+            id = card.templateId,
+            name = card.cardName,
+            category = "My Templates",
+            isPremium = false,
+            bgStart = card.backgroundColor,
+            bgEnd = card.gradientEndColor,
+            primaryColor = card.qrCodeColor,
+            borderStyle = card.borderStyle,
+            fontStyle = card.fontStyle
+        )
+    }
+
+    val filteredPresets = when (selectedCategory) {
+        "All" -> cardTemplates
+        "Favorites" -> cardTemplates.filter { favoriteIds.contains(it.id) }
+        "Recently Used" -> {
+            val allSource = cardTemplates + convertedCustoms
+            recentIds.mapNotNull { rid -> allSource.find { it.id == rid } }
+        }
+        "My Templates" -> convertedCustoms
+        else -> cardTemplates.filter { it.category == selectedCategory }
     }
 
     Column(
@@ -1328,12 +1492,6 @@ fun TemplatesView(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text("Design Templates", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
-
-            if (!isPremium) {
-                TextButton(onClick = { onNavigate(ActiveScreen.PREMIUM) }) {
-                    Text("Unlock 500+ Premium", color = Color(0xFFD4AF37), fontWeight = FontWeight.Bold)
-                }
             }
         }
 
@@ -1365,33 +1523,60 @@ fun TemplatesView(
             }
         }
 
-        // Templates Vertical Grid
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            items(filteredPresets) { preset ->
-                TemplateCardItem(
-                    preset = preset,
-                    isPremiumUnlocked = isPremium,
-                    onSelect = {
-                        if (preset.isPremium && !isPremium) {
-                            // Show premium lock dialog or reward prompt
-                            Toast.makeText(context, "Premium preset! Watch a rewarded video or unlock Premium.", Toast.LENGTH_LONG).show()
-                            onNavigate(ActiveScreen.PREMIUM)
-                        } else {
-                            // Instantiate and launch card editor
+        if (filteredPresets.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = Color.DarkGray,
+                        modifier = Modifier.size(54.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "No templates found in \"$selectedCategory\"",
+                        color = Color.Gray,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        } else {
+            // Templates Vertical Grid
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(filteredPresets) { preset ->
+                    val isFav = favoriteIds.contains(preset.id)
+                    val isCustom = preset.id.startsWith("custom_")
+                    TemplateCardItem(
+                        preset = preset,
+                        isPremiumUnlocked = isPremium,
+                        isFavorite = isFav,
+                        onToggleFavorite = {
+                            viewModel.toggleFavoriteTemplate(preset.id)
+                        },
+                        onDeleteCustom = if (isCustom) {
+                            { viewModel.deleteCustomTemplate(preset.id) }
+                        } else null,
+                        onSelect = {
                             viewModel.createNewCardProject(
-                                name = "Modern ${preset.name}",
+                                name = preset.name,
                                 templateId = preset.id
                             )
                             onOpenEditor()
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -1401,7 +1586,10 @@ fun TemplatesView(
 fun TemplateCardItem(
     preset: TemplatePreset,
     isPremiumUnlocked: Boolean,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    isFavorite: Boolean = false,
+    onToggleFavorite: () -> Unit = {},
+    onDeleteCustom: (() -> Unit)? = null
 ) {
     val startGradientColor = android.graphics.Color.parseColor(preset.bgStart)
     val endGradientColor = android.graphics.Color.parseColor(preset.bgEnd)
@@ -1439,6 +1627,44 @@ fun TemplateCardItem(
                     Box(modifier = Modifier.width(32.dp).height(5.dp).background(Color.White))
                     Box(modifier = Modifier.padding(top = 2.dp).width(20.dp).height(3.dp).background(Color(accentColor)))
                 }
+
+                // Star bookmark or custom template delete button
+                Row(
+                    modifier = Modifier.align(Alignment.TopEnd),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (onDeleteCustom != null) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Black.copy(0.5f),
+                            modifier = Modifier
+                                .clickable { onDeleteCustom() }
+                                .size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Template",
+                                tint = Color(0xFFFF5252),
+                                modifier = Modifier.padding(4.dp)
+                            )
+                        }
+                    } else {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Black.copy(0.5f),
+                            modifier = Modifier
+                                .clickable { onToggleFavorite() }
+                                .size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Toggle Favorite",
+                                tint = if (isFavorite) Color(0xFFD4AF37) else Color.White.copy(alpha = 0.35f),
+                                modifier = Modifier.padding(4.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1448,7 +1674,7 @@ fun TemplateCardItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(preset.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
                     Text(preset.category, color = Color.Gray, fontSize = 9.sp)
                 }
@@ -1565,7 +1791,7 @@ fun SettingsView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Unit) {
             }
 
             Text(
-                text = "ACCOUNT & MEMBERSHIP",
+                text = "ACCOUNT PROFILE",
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black
@@ -1574,11 +1800,6 @@ fun SettingsView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Unit) {
             SettingsLinkRow(title = "Manage Account Profile", icon = Icons.Default.Person, label = "View Details") {
                 editNameInput = viewModel.prefs.userName
                 showAccountDialog = true
-            }
-
-            SettingsLinkRow(title = "Restore Studio Purchases", icon = Icons.Default.Refresh, label = "Validate") {
-                viewModel.upgradeSubscription("Lifetime")
-                Toast.makeText(context, "Purchases recovered successfully! Lifetime Premium VIP unlocked.", Toast.LENGTH_LONG).show()
             }
 
             Text(
@@ -1607,10 +1828,6 @@ fun SettingsView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Unit) {
                 showSupportDialog = true
             }
 
-            SettingsLinkRow(title = "AdMob Monetization Unit Profiles", icon = Icons.Default.Build, label = "Setup Ads") {
-                onNavigate(ActiveScreen.ADS_MANAGER)
-            }
-
             // Muted app version and metadata
             Spacer(modifier = Modifier.height(14.dp))
             Column(
@@ -1624,7 +1841,7 @@ fun SettingsView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Unit) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "App Edition: v2.10 (Premium Elite Sandbox)",
+                    text = "App Edition: v2.10 (Standard Free Suite)",
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     fontSize = 10.sp
                 )
@@ -1704,18 +1921,58 @@ fun SettingsView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Unit) {
     if (showPrivacyDialog) {
         AlertDialog(
             onDismissRequest = { showPrivacyDialog = false },
-            title = { Text("Privacy Policy Details", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
+            title = { Text("Privacy Policy (Last Updated: June 2026)", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text(
-                        text = "We are dedicated to safeguarding your corporate visual workspace:\n\n" +
-                               "1. Local Storage Sandbox: Your card graphics files, template records, and custom elements rest securely inside your device database.\n\n" +
-                               "2. Zero Telemetry Tracking: We do not log or stream visual coordinates, designs, or drafts back to external servers.\n\n" +
-                               "3. AdMob Integrations: Advertisements load securely via standard Google Ad SDK protocols without profiling private data.\n\n" +
-                               "Feel safe designing your creative assets with Pillai'Play Visiter Card Maker.",
-                        color = MaterialTheme.colorScheme.onSurface.copy(0.8f),
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp
+                        text = "Welcome to Pillai'Play Visiting Card Maker.\n\n" +
+                               "We value your privacy and are committed to protecting your personal information.\n\n" +
+                               "### 1. Information We Collect\n" +
+                               "The app may collect:\n" +
+                               "• Name and profile information provided during sign-in.\n" +
+                               "• Email address when using Google Sign-In.\n" +
+                               "• Business card information created by the user.\n" +
+                               "• App usage analytics.\n" +
+                               "• Device information required for app functionality.\n" +
+                               "• Advertising-related information through AdMob.\n\n" +
+                               "### 2. How We Use Information\n" +
+                               "We use information to:\n" +
+                               "• Provide app functionality.\n" +
+                               "• Save and manage business cards.\n" +
+                               "• Improve user experience.\n" +
+                               "• Display advertisements.\n" +
+                               "• Fix bugs and improve performance.\n" +
+                               "• Provide customer support.\n\n" +
+                               "### 3. Google Sign-In\n" +
+                               "If you sign in using Google, we may receive:\n" +
+                               "• Your name\n" +
+                               "• Email address\n" +
+                               "• Profile picture (if available)\n\n" +
+                               "We only use this information to provide account-related features.\n\n" +
+                               "### 4. Advertisements\n" +
+                               "This app may display advertisements through Google AdMob.\n" +
+                               "Google may collect information according to its own privacy policies to provide relevant ads and measure ad performance.\n\n" +
+                               "### 5. Data Storage\n" +
+                               "Business card information may be stored locally on your device and/or securely through services used by the application.\n\n" +
+                               "### 6. Data Security\n" +
+                               "We take reasonable measures to protect user information. However, no method of electronic storage or transmission is completely secure.\n\n" +
+                               "### 7. Children's Privacy\n" +
+                               "This application is not intended for children under 13 years of age.\n\n" +
+                               "### 8. Third-Party Services\n" +
+                               "The app may use:\n" +
+                               "• Google Sign-In\n" +
+                               "• Firebase\n" +
+                               "• Google AdMob\n" +
+                               "• Google Analytics\n" +
+                               "These services have their own privacy policies.\n\n" +
+                               "### 9. Changes to This Policy\n" +
+                               "We may update this Privacy Policy from time to time. Changes will be reflected within the application.\n\n" +
+                               "### 10. Contact Us\n" +
+                               "For questions regarding this Privacy Policy, contact:\n" +
+                               "praveenkumarpillai2010@gmail.com",
+                        color = MaterialTheme.colorScheme.onSurface.copy(0.85f),
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp
                     )
                 }
             },
@@ -1734,17 +1991,48 @@ fun SettingsView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Unit) {
     if (showTermsDialog) {
         AlertDialog(
             onDismissRequest = { showTermsDialog = false },
-            title = { Text("Terms & Conditions", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
+            title = { Text("Terms and Conditions (Last Updated: June 2026)", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text(
-                        text = "Usage Regulations for Pillai'Play Business Platform:\n\n" +
-                               "1. Design Licensing: Free and Premium layout templates can be utilized for both personal and corporate branding purposes without secondary fees.\n\n" +
-                               "2. Commercial Redistribution: You are forbidden from repackaging design presets or components to sell on other marketplaces.\n\n" +
-                               "3. Storage Responsibility: Local database loss during manual device clearing is the user's responsibility. Recover purchases via the 'Restore Studio Purchases' validator at any time.",
-                        color = MaterialTheme.colorScheme.onSurface.copy(0.8f),
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp
+                        text = "Welcome to Pillai'Play Visiting Card Maker.\n\n" +
+                               "By downloading or using this application, you agree to the following terms.\n\n" +
+                               "### 1. Use of the Application\n" +
+                               "You may use the application for creating and managing digital privacy-safe business cards for personal or business purposes.\n" +
+                               "You agree not to:\n" +
+                               "• Use the app for unlawful activities.\n" +
+                               "• Upload harmful, illegal, or misleading content.\n" +
+                               "• Attempt to interfere with app functionality.\n" +
+                               "• Reverse engineer or misuse the service.\n\n" +
+                               "### 2. User Content\n" +
+                               "Users are responsible for all information, images, logos, QR codes, and business details they upload or create using the app.\n" +
+                               "You retain ownership of your content.\n\n" +
+                               "### 3. Intellectual Property\n" +
+                               "The application, design, branding, and software remain the property of Pillai'Play.\n" +
+                               "Users may not copy, redistribute, or reproduce the application without permission.\n\n" +
+                               "### 4. Advertisements\n" +
+                               "The application may display advertisements through third-party advertising providers.\n" +
+                               "Interaction with advertisements is subject to the policies of the advertising provider.\n\n" +
+                               "### 5. Service Availability\n" +
+                               "We strive to keep the app available at all times but do not guarantee uninterrupted service.\n" +
+                               "Features may be updated, modified, or removed at any time.\n\n" +
+                               "### 6. Limitation of Liability\n" +
+                               "Pillai'Play shall not be responsible for:\n" +
+                               "• Data loss\n" +
+                               "• Business losses\n" +
+                               "• Indirect damages\n" +
+                               "• Service interruptions\n" +
+                               "• Third-party service failures\n\n" +
+                               "### 7. Termination\n" +
+                               "We reserve the right to suspend access to users who violate these terms.\n\n" +
+                               "### 8. Changes to Terms\n" +
+                               "These Terms and Conditions may be updated periodically. Continued use of the application indicates acceptance of any updated terms.\n\n" +
+                               "### 9. Contact Information\n" +
+                               "For support or inquiries, email us at:\n" +
+                               "praveenkumarpillai2010@gmail.com",
+                        color = MaterialTheme.colorScheme.onSurface.copy(0.85f),
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp
                     )
                 }
             },
@@ -1768,14 +2056,14 @@ fun SettingsView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("For custom branding enquiries, business licensing, API integrations, or technical aid, contact us directly:", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), fontSize = 12.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Support Mailbox: support@pillaiplay.com", color = Color(0xFFD4AF37), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("Support Mailbox: praveenkumarpillai2010@gmail.com", color = Color(0xFFD4AF37), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        val clip = android.content.ClipData.newPlainText("Support Email", "support@pillaiplay.com")
+                        val clip = android.content.ClipData.newPlainText("Support Email", "praveenkumarpillai2010@gmail.com")
                         clipboard.setPrimaryClip(clip)
                         Toast.makeText(context, "Developer support email copied to clipboard!", Toast.LENGTH_SHORT).show()
                         showSupportDialog = false
@@ -1827,718 +2115,8 @@ fun SettingsLinkRow(title: String, icon: ImageVector, label: String, onClick: ()
 // 6. PREMIUM / SUBSCRIPTION VIEW
 @Composable
 fun PremiumView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Unit) {
-    val context = LocalContext.current
-    val isPremium by viewModel.isUserPremium.collectAsState()
-    val scrollState = rememberScrollState()
-
-    // 1. Interactive States for Selected Plan and Play Store Billing Simulation
-    var selectedPlanKey by remember { mutableStateOf("premium_yearly") }
-    var showBillingDialog by remember { mutableStateOf(false) }
-    var activeBillingProduct by remember { mutableStateOf<BillingProduct?>(null) }
-    var showCelebrationDialog by remember { mutableStateOf(false) }
-
-    // 2. Infinite Animations for floating elements and glowing effects
-    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "premium_anims")
-    
-    val floatingOffsetY by infiniteTransition.animateFloat(
-        initialValue = -8f,
-        targetValue = 8f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(durationMillis = 2000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        ),
-        label = "crown_floating"
-    )
-
-    val crownRotation by infiniteTransition.animateFloat(
-        initialValue = -5f,
-        targetValue = 5f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(durationMillis = 2500, easing = androidx.compose.animation.core.LinearOutSlowInEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        ),
-        label = "crown_rotate"
-    )
-
-    val pulseGlowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 0.5f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(durationMillis = 1800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        ),
-        label = "gold_glow"
-    )
-
-    // Fade-in animation triggered on launch
-    var animateCardsIn by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        animateCardsIn = true
-    }
-
-    // List of billing products (including the requested Monthly/Yearly/Lifetime details)
-    val products = listOf(
-        BillingProduct(
-            id = "premium_monthly",
-            title = "Premium Monthly",
-            priceLabel = "₹99/month",
-            badge = "Most Flexible",
-            features = listOf("All Premium Features", "Cancel Anytime", "No Ads"),
-            buttonLabel = "Subscribe Monthly"
-        ),
-        BillingProduct(
-            id = "premium_yearly",
-            title = "Premium Yearly",
-            priceLabel = "₹799/year",
-            badge = "Best Value",
-            features = listOf("All Premium Features", "Save More Than 30%", "No Ads"),
-            buttonLabel = "Subscribe Yearly",
-            isPopular = true
-        ),
-        BillingProduct(
-            id = "premium_lifetime",
-            title = "Lifetime Premium",
-            priceLabel = "₹999 One-Time",
-            badge = "Lifetime VIP",
-            features = listOf("Pay Once", "Lifetime Access", "No Recurring Payments", "All Future Updates"),
-            buttonLabel = "Buy Lifetime"
-        )
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF07080E)) // Luxury Premium Dark Theme
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-        ) {
-            // Header back-bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(
-                    onClick = { onNavigate(ActiveScreen.DASHBOARD) },
-                    modifier = Modifier.background(Color(0xFF131722), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .border(1.dp, Color(0xFFD4AF37).copy(0.4f), RoundedCornerShape(20.dp))
-                        .background(Color(0xFF1D170B), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = Color(0xFFD4AF37),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (isPremium) "VIP ACTIVE" else "GO PREMIUM",
-                            color = Color(0xFFD4AF37),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
-                        )
-                    }
-                }
-            }
-
-            // HEADER SECTION
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Floating Crown unicode representation
-                Box(
-                    modifier = Modifier
-                        .offset(y = floatingOffsetY.dp)
-                        .graphicsLayer { rotationZ = crownRotation }
-                        .size(80.dp)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(Color(0xFFD4AF37).copy(pulseGlowAlpha), Color.Transparent)
-                            ),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "👑",
-                        fontSize = 52.sp,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                Text(
-                    text = "Unlock Premium",
-                    color = Color.White,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Normal,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-
-                Text(
-                    text = "Create professional visiting cards without limits.",
-                    color = Color.LightGray.copy(0.81f),
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 6.dp, start = 16.dp, end = 16.dp)
-                )
-                
-                Text(
-                    text = "Pillai'Play Visiting Card Maker Pro Suite",
-                    color = Color(0xFFD4AF37),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            // INCLUDED VALUE BENEFITS BOX SHOWCASE
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 12.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(BorderStroke(1.dp, Color(0xFF222B3A)), RoundedCornerShape(16.dp))
-                    .background(Color(0xFF0F131E))
-                    .padding(20.dp)
-            ) {
-                Text(
-                    text = "INCLUDED PREMIUM FEATURES",
-                    color = Color(0xFFD4AF37),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.2.sp,
-                    modifier = Modifier.padding(bottom = 14.dp)
-                )
-
-                val benefits = listOf(
-                    "Unlimited Custom Background Uploads", 
-                    "Unlimited Card Creation",
-                    "Unlimited Exports", 
-                    "Premium Templates", 
-                    "Watermark-Free Downloads", 
-                    "No Advertisements", 
-                    "Premium Fonts", 
-                    "Premium Icons", 
-                    "Priority Support", 
-                    "Future Premium Features Included"
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    benefits.forEach { benefit ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .background(Color(0xFF1D2825), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color(0xFF00FFCC),
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = benefit,
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // PRICING LAYOUT GRID
-            Column(
-                modifier = Modifier.padding(horizontal = 24.dp)
-            ) {
-                Text(
-                    text = "CHOOSE YOUR PLAN",
-                    color = Color.LightGray,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.2.sp,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                products.forEach { product ->
-                    val isSelected = selectedPlanKey == product.id
-                    val isPopular = product.isPopular == true
-
-                    // Scale factor animation based on state
-                    val scale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.02f else 1.0f,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                        label = "cardScale"
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                            }
-                            .border(
-                                border = BorderStroke(
-                                    width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) Color(0xFFD4AF37) else if (isPopular) Color(0xFFD4AF37).copy(0.4f) else Color(0xFF222B3A)
-                                ),
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .background(
-                                color = if (isSelected) Color(0xFF1D170B) else Color(0xFF111420),
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .clickable {
-                                selectedPlanKey = product.id
-                            }
-                            .padding(16.dp)
-                    ) {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(
-                                        selected = isSelected,
-                                        onClick = { selectedPlanKey = product.id },
-                                        colors = RadioButtonDefaults.colors(
-                                            selectedColor = Color(0xFFD4AF37),
-                                            unselectedColor = Color.Gray
-                                        )
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = product.title,
-                                        color = Color.White,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                if (product.badge.isNotEmpty()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                color = if (isPopular) Color(0xFFD4AF37) else Color(0xFF22283A),
-                                                shape = RoundedCornerShape(4.dp)
-                                            )
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                    ) {
-                                        Text(
-                                            text = product.badge.uppercase(),
-                                            color = if (isPopular) Color.Black else Color.LightGray,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                Column(modifier = Modifier.weight(0.7f)) {
-                                    product.features.forEach { feat ->
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(vertical = 1.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = Color(0xFFD4AF37),
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = feat,
-                                                color = Color.LightGray.copy(0.85f),
-                                                fontSize = 11.sp
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Text(
-                                    text = product.priceLabel,
-                                    color = Color(0xFFD4AF37),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    modifier = Modifier.weight(0.3f),
-                                    textAlign = TextAlign.End
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // BIG PREMIUM INTERACTIVE PURCHASE ACTION BUTTONS
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                val selectedProduct = products.find { it.id == selectedPlanKey } ?: products[1]
-
-                Button(
-                    onClick = {
-                        activeBillingProduct = selectedProduct
-                        showBillingDialog = true
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .testTag("subscribe_action_button"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFD4AF37),
-                        contentColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = null,
-                            tint = Color.Black,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = selectedProduct.buttonLabel,
-                            color = Color.Black,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // COMPARISON TABLE: FREE VS PREMIUM FEATURES
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-            ) {
-                Text(
-                    text = "CORE COMPARISON MATRIX",
-                    color = Color.LightGray,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.2.sp,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                // Render structured table
-                Surface(
-                    color = Color(0xFF0F111A),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFF222B3A))
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // Header row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFF141926))
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Capability", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.42f))
-                            Text("FREE Standard", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.29f), textAlign = TextAlign.Center)
-                            Text("PRO Premium Gold", color = Color(0xFFD4AF37), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(0.29f), textAlign = TextAlign.Center)
-                        }
-
-                        val comparisonRows = listOf(
-                            ComparisonRowItem("Advertisements", "Ads Enabled", "Clean / No Ads ✓", false),
-                            ComparisonRowItem("Custom Backgrounds", "5 Uploads Max", "Unlimited Core ✓", true),
-                            ComparisonRowItem("Design Presets", "Standard Catalog", "Unlock All 20+ ✓", true),
-                            ComparisonRowItem("Export Resolution", "Standard Quality", "Ultra HD Vector ✓", true),
-                            ComparisonRowItem("Advanced Tools", "Basic Controls", "Lock & Multi-QR ✓", true)
-                        )
-
-                        comparisonRows.forEachIndexed { idx, row ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(if (idx % 2 == 0) Color(0xFF10131E) else Color(0xFF161B29))
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = row.feature,
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.weight(0.42f)
-                                )
-                                Text(
-                                    text = row.freeValue,
-                                    color = Color.LightGray.copy(0.6f),
-                                    fontSize = 11.sp,
-                                    modifier = Modifier.weight(0.29f),
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = row.premValue,
-                                    color = if (row.highlight) Color(0xFF00FFCC) else Color(0xFFD4AF37),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.weight(0.29f),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // RESTORE PURCHASES SECTION
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        // Restore Simulated Billing products standard verification
-                        viewModel.upgradeSubscription("Restored Pro Access")
-                        Toast.makeText(context, "Checking Google Play... Standard purchase records restored. Premium Gold activated!", Toast.LENGTH_LONG).show()
-                    },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD4AF37)),
-                    border = BorderStroke(1.dp, Color(0xFFD4AF37).copy(0.5f)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFFD4AF37))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Restore Purchases", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // SYSTEM TERMS & POLICY SECTION
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Subscriptions renew automatically unless canceled through Google Play. Manage subscriptions in Google Play Settings.",
-                    color = Color.Gray,
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Developer Switch testing reset mode when premium
-                if (isPremium) {
-                    TextButton(onClick = { 
-                        viewModel.downgradeToFree()
-                        Toast.makeText(context, "Account reset to Standard Sandbox", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Text("Revert Account to Free Mode (Testing)", color = Color.Red.copy(0.7f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(60.dp))
-        }
-
-        // 3. ACTUAL GOOGLE PLAY BILLING OVERLAY DIALOG (SIMULATION)
-        if (showBillingDialog && activeBillingProduct != null) {
-            val prod = activeBillingProduct!!
-            AlertDialog(
-                onDismissRequest = { showBillingDialog = false },
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "🟢 Google Play Billing",
-                            color = Color(0xFF00E676),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-                    }
-                },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "Pillai'Play Visiting Card Maker Pro",
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
-                            fontSize = 15.sp
-                        )
-                        
-                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Product Item ID:", color = Color.Gray, fontSize = 12.sp)
-                            Text(prod.id, color = Color.LightGray, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Account Details:", color = Color.Gray, fontSize = 12.sp)
-                            Text(viewModel.prefs.userEmail.take(24), color = Color.LightGray, fontSize = 12.sp)
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Transaction Cost:", color = Color.Gray, fontSize = 12.sp)
-                            Text(prod.priceLabel, color = Color(0xFF00FFCC), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
-                        
-                        Text(
-                            text = "This is a secure native integration mock validating Google Play API credentials. Click confirmation below to execute premium activation triggers.",
-                            color = Color.Gray,
-                            fontSize = 10.sp,
-                            lineHeight = 14.sp
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            viewModel.upgradeSubscription(prod.title)
-                            showBillingDialog = false
-                            showCelebrationDialog = true
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00875A)) // Official Play Store Confirm Color
-                    ) {
-                        Text("Confirm Simulated Purchase", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showBillingDialog = false }) {
-                        Text("Cancel", color = Color.LightGray)
-                    }
-                },
-                containerColor = Color(0xFF131722)
-            )
-        }
-
-        // Golden Confetti Celebration layout triggers success overlay
-        if (showCelebrationDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    showCelebrationDialog = false
-                    onNavigate(ActiveScreen.DASHBOARD)
-                },
-                title = {
-                    Text(
-                        text = "🎉 WELCOME TO VIP PREMIUM!",
-                        color = Color(0xFFD4AF37),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 18.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                },
-                text = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("✨", fontSize = 48.sp)
-                        Text(
-                            text = "Your Transaction Was Completed Successfully!",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = "Standard limits are now deactivated. Take advantage of full AI design resources, unlimited layouts, watermark-free high-res downloads, and pure vector elements.",
-                            color = Color.LightGray,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showCelebrationDialog = false
-                            onNavigate(ActiveScreen.DASHBOARD)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Launch Pro Suite Features", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                },
-                containerColor = Color(0xFF121420)
-            )
-        }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        onNavigate(ActiveScreen.DASHBOARD)
     }
 }
 
@@ -2756,6 +2334,7 @@ fun AICardGeneratorView(
     // Required Form Inputs
     var inputName by remember { mutableStateOf(viewModel.prefs.userName) }
     var inputCompany by remember { mutableStateOf(viewModel.prefs.userName + " Enterprises") }
+    var inputBrandDescription by remember { mutableStateOf("A specialized boutique coffee roastery focusing on organic single-origin beans, styled with warm earthy colors and rustic aesthetic elements.") }
     var inputJobTitle by remember { mutableStateOf("Managing Director") }
     var inputPhone by remember { mutableStateOf("+91 98765 43210") }
     var inputEmail by remember { mutableStateOf("contact@corporate.com") }
@@ -2861,34 +2440,18 @@ fun AICardGeneratorView(
             }
 
             // Free Usage Counter Badge
-            if (!isPremium) {
-                Surface(
-                    color = Color(0xFFD4AF37).copy(0.15f),
-                    border = BorderStroke(1.dp, Color(0xFFD4AF37)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "Usage: ${aiGenerationsCount.coerceAtMost(3)}/3 Today",
-                        color = Color(0xFFD4AF37),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
-            } else {
-                Surface(
-                    color = Color(0xFF00FFCC).copy(0.15f),
-                    border = BorderStroke(1.dp, Color(0xFF00FFCC)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "Premium Unlimited",
-                        color = Color(0xFF00FFCC),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
+            Surface(
+                color = Color(0xFF00FFCC).copy(0.15f),
+                border = BorderStroke(1.dp, Color(0xFF00FFCC)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "Free Unlimited",
+                    color = Color(0xFF00FFCC),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
             }
         }
 
@@ -3027,6 +2590,7 @@ fun AICardGeneratorView(
                                                 category = selectedCategory,
                                                 preferredColor = preferredColor,
                                                 preferredStyle = preferredStyle,
+                                                brandDescription = inputBrandDescription,
                                                 logoUri = logoUri,
                                                 photoUri = photoUri
                                             )
@@ -3120,6 +2684,25 @@ fun AICardGeneratorView(
                             unfocusedBorderColor = Color.DarkGray
                         ),
                         modifier = Modifier.fillMaxWidth().testTag("ai_company_input")
+                    )
+
+                    OutlinedTextField(
+                        value = inputBrandDescription,
+                        onValueChange = { inputBrandDescription = it },
+                        label = { Text("Brand Description / Brief", color = Color.LightGray) },
+                        placeholder = { Text("e.g. Eco-friendly modern coffee roastery...", color = Color.DarkGray) },
+                        singleLine = false,
+                        maxLines = 4,
+                        minLines = 2,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.LightGray,
+                            focusedBorderColor = Color(0xFFD4AF37),
+                            unfocusedBorderColor = Color.DarkGray
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("ai_brand_desc_input")
                     )
 
                     Row(
@@ -3378,25 +2961,21 @@ fun AICardGeneratorView(
                                 if (inputName.trim().isEmpty() || inputCompany.trim().isEmpty()) {
                                     Toast.makeText(context, "Full Name and Company are required", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    if (!isPremium && aiGenerationsCount >= 3) {
-                                        Toast.makeText(context, "Upgrade to Premium for Unlimited AI generations!", Toast.LENGTH_LONG).show()
-                                        onNavigate(ActiveScreen.PREMIUM)
-                                    } else {
-                                        viewModel.triggerAICardGeneration(
-                                            name = inputName,
-                                            companyName = inputCompany,
-                                            jobTitle = inputJobTitle,
-                                            phoneNumber = inputPhone,
-                                            email = inputEmail,
-                                            website = inputWebsite,
-                                            address = inputAddress,
-                                            category = selectedCategory,
-                                            preferredColor = preferredColor,
-                                            preferredStyle = preferredStyle,
-                                            logoUri = logoUri,
-                                            photoUri = photoUri
-                                        )
-                                    }
+                                    viewModel.triggerAICardGeneration(
+                                        name = inputName,
+                                        companyName = inputCompany,
+                                        jobTitle = inputJobTitle,
+                                        phoneNumber = inputPhone,
+                                        email = inputEmail,
+                                        website = inputWebsite,
+                                        address = inputAddress,
+                                        category = selectedCategory,
+                                        preferredColor = preferredColor,
+                                        preferredStyle = preferredStyle,
+                                        brandDescription = inputBrandDescription,
+                                        logoUri = logoUri,
+                                        photoUri = photoUri
+                                    )
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),

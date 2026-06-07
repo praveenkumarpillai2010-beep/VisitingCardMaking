@@ -27,23 +27,23 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFFB8860B),       // Dark Goldenrod
-    secondary = Color(0xFF008080),     // Soft Teal
-    tertiary = Color(0xFFC2185B),      // Rich Crimson
-    background = Color(0xFFF9FAFC),    // Off-white slate
-    surface = Color(0xFFFFFFFF),       // Clear white surface
-    surfaceVariant = Color(0xFFECEFF1),// Elevated light surface
+    primary = Color(0xFF2196F3),        // Primary Blue
+    secondary = Color(0xFFEAF4FF),      // Light Blue
+    tertiary = Color(0xFF0B66C3),       // Vibrant Accent Blue
+    background = Color(0xFFFFFFFF),     // White Background
+    surface = Color(0xFFFFFFFF),        // White Surface
+    surfaceVariant = Color(0xFFF0F6FF), // Soft Light Blue-White Gradient Base
     onPrimary = Color.White,
-    onSecondary = Color.White,
-    onBackground = Color(0xFF1A1C1E),  // Dark text
-    onSurface = Color(0xFF1A1C1E),     // Dark text
-    onSurfaceVariant = Color(0xFF37474F),
+    onSecondary = Color(0xFF2196F3),
+    onBackground = Color(0xFF101C33),   // Deep Navy Slate for text/contrast
+    onSurface = Color(0xFF101C33),      // Dark Slate body text
+    onSurfaceVariant = Color(0xFF2C3E5E),
     error = Color(0xFFD32F2F)
 )
 
 @Composable
 fun MyApplicationTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Avoid dark mode as the default design
     dynamicColor: Boolean = false, // Preserve brand-consistent premium colors
     content: @Composable () -> Unit,
 ) {

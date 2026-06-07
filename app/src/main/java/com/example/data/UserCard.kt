@@ -108,7 +108,8 @@ data class UserCard(
     val addressRotation: Float = 0f,
     val addressSize: Float = 9f,
     val addressZIndex: Int = 7,
-    val lockedElements: String = ""
+    val lockedElements: String = "",
+    val cardShape: String = "RECTANGLE"
 )
 
 data class DesignElement(

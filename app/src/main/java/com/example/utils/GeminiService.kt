@@ -30,7 +30,26 @@ object GeminiService {
         val qrCodeVisible: Boolean = true,
         val qrX: Float = 240f,
         val qrY: Float = 110f,
-        val visibleFields: List<String> = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address")
+        val visibleFields: List<String> = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"),
+        val cardShape: String = "ROUNDED_RECTANGLE",
+        val layoutArrangement: String = "CLASSIC_REAR_QR",
+        val fullNameX: Float? = null,
+        val fullNameY: Float? = null,
+        val fullNameSize: Float? = null,
+        val jobTitleX: Float? = null,
+        val jobTitleY: Float? = null,
+        val jobTitleSize: Float? = null,
+        val companyNameX: Float? = null,
+        val companyNameY: Float? = null,
+        val companyNameSize: Float? = null,
+        val mobileX: Float? = null,
+        val mobileY: Float? = null,
+        val emailX: Float? = null,
+        val emailY: Float? = null,
+        val websiteX: Float? = null,
+        val websiteY: Float? = null,
+        val addressX: Float? = null,
+        val addressY: Float? = null
     )
 
     interface AIAssistantCallback {
@@ -65,13 +84,19 @@ object GeminiService {
         val systemInstruction = """
             You are a professional Graphic and Branding UI Designer with elite aesthetic sense.
             Your task is to generate exactly 3 beautiful, distinct, high-end visiting card layout design proposals (as Option 1, Option 2, Option 3) matching the user's requirements and brand description.
-            The user provides a brief description of their brand: "$brandDescription". You MUST integrate details, vibes, and themes implied by this brand description into the generated options. Design professional card layouts and color schemes centered on this brand brief.
+            The user provides a brief description of their brand: "$brandDescription". You MUST integrate details, vibes, and themes implied by this brand description into the generated options. Design professional card layouts, color schemes, and layouts centered on this brand brief.
 
             Design 1 MUST match the user requested design style ($preferredStyle) and preferred color tone ($preferredColor) while incorporating elements of the brand description ($brandDescription).
             Design 2 MUST represent elite prestige branding based on the brand description ($brandDescription). Make this custom tailored to their brand vibe with high-end palettes (e.g., if brand is tea/nature, use forest greens or earthy clay; if it's fintech/wealth, use deep blue with cyber gold; if it's sweet treats, use pastel lavender & pink; if it's clean wellness, use soothing mint or teal, etc.).
             Design 3 MUST be a futuristic high-tech neon accented minimal design or custom theme inspired uniquely by the brand description ($brandDescription).
 
             The fontStyle field must be exactly one of: "Space Grotesk", "Elegant Serif", "Modern Bold", or "Tech Clean".
+            The cardShape field must be exactly one of: "ROUNDED_RECTANGLE", "LEAF_CUT", "HEXAGON", or "RECTANGLE".
+            The layoutArrangement field must be exactly one of: "CLASSIC_REAR_QR", "CENTER_MINIMALIST", "MODERN_SPLIT", or "HORIZONTAL_DENSITY".
+
+            Specify coordinate placements (values in Float from 0.0 to 360.0 for X, and 0.0 to 220.0 for Y) and sizes (e.g. fullNameSize: 16.0 to 22.0, jobTitleSize: 9.0 to 12.0) that fit the chosen arrangement and prevent overlapping.
+            Ensure standard layout arrangements match these definitions if custom coordinates are not suggested, but you should provide exact custom values for perfect balance.
+            Card boundaries: Width is 360.0 (X range 0.0 to 360.0), Height is 220.0 (Y range 0.0 to 220.0).
 
             You must output ONLY a valid raw JSON object. Do not include markdown code block characters like ```json.
             The JSON object must have EXACTLY the following structure with no other commentary or wrap:
@@ -83,11 +108,30 @@ object GeminiService {
                   "gradientEndColor": "#HEXCOLOR",
                   "primaryColor": "#HEXCOLOR",
                   "fontStyle": "font style name",
+                  "cardShape": "ROUNDED_RECTANGLE",
+                  "layoutArrangement": "CLASSIC_REAR_QR",
                   "qrCodeVisible": true,
-                  "qrCodeX": 240.0,
-                  "qrCodeY": 110.0,
+                  "qrCodeX": 260.0,
+                  "qrCodeY": 70.0,
                   "qrCodeColor": "#HEXCOLOR",
-                  "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"]
+                  "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"],
+                  "fullNameX": 20.0,
+                  "fullNameY": 25.0,
+                  "fullNameSize": 19.0,
+                  "jobTitleX": 20.0,
+                  "jobTitleY": 50.0,
+                  "jobTitleSize": 10.0,
+                  "companyNameX": 20.0,
+                  "companyNameY": 75.0,
+                  "companyNameSize": 12.0,
+                  "mobileX": 20.0,
+                  "mobileY": 115.0,
+                  "emailX": 20.0,
+                  "emailY": 135.0,
+                  "websiteX": 20.0,
+                  "websiteY": 155.0,
+                  "addressX": 20.0,
+                  "addressY": 175.0
                 },
                 {
                   "themeName": "Theme Option 2 Name",
@@ -95,11 +139,30 @@ object GeminiService {
                   "gradientEndColor": "#HEXCOLOR",
                   "primaryColor": "#HEXCOLOR",
                   "fontStyle": "font style name",
+                  "cardShape": "LEAF_CUT",
+                  "layoutArrangement": "CENTER_MINIMALIST",
                   "qrCodeVisible": true,
-                  "qrCodeX": 240.0,
+                  "qrCodeX": 140.0,
                   "qrCodeY": 110.0,
                   "qrCodeColor": "#HEXCOLOR",
-                  "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"]
+                  "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"],
+                  "fullNameX": 90.0,
+                  "fullNameY": 65.0,
+                  "fullNameSize": 20.0,
+                  "jobTitleX": 110.0,
+                  "jobTitleY": 90.0,
+                  "jobTitleSize": 10.0,
+                  "companyNameX": 105.0,
+                  "companyNameY": 35.0,
+                  "companyNameSize": 12.0,
+                  "mobileX": 35.0,
+                  "mobileY": 185.0,
+                  "emailX": 130.0,
+                  "emailY": 185.0,
+                  "websiteX": 225.0,
+                  "websiteY": 185.0,
+                  "addressX": 105.0,
+                  "addressY": 205.0
                 },
                 {
                   "themeName": "Theme Option 3 Name",
@@ -107,11 +170,30 @@ object GeminiService {
                   "gradientEndColor": "#HEXCOLOR",
                   "primaryColor": "#HEXCOLOR",
                   "fontStyle": "font style name",
+                  "cardShape": "HEXAGON",
+                  "layoutArrangement": "MODERN_SPLIT",
                   "qrCodeVisible": true,
-                  "qrCodeX": 240.0,
-                  "qrCodeY": 110.0,
+                  "qrCodeX": 35.0,
+                  "qrCodeY": 65.0,
                   "qrCodeColor": "#HEXCOLOR",
-                  "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"]
+                  "visibleFields": ["fullName", "jobTitle", "companyName", "mobileNumber", "email", "website"],
+                  "fullNameX": 160.0,
+                  "fullNameY": 50.0,
+                  "fullNameSize": 19.0,
+                  "jobTitleX": 160.0,
+                  "jobTitleY": 72.0,
+                  "jobTitleSize": 10.0,
+                  "companyNameX": 160.0,
+                  "companyNameY": 25.0,
+                  "companyNameSize": 12.0,
+                  "mobileX": 160.0,
+                  "mobileY": 115.0,
+                  "emailX": 160.0,
+                  "emailY": 135.0,
+                  "websiteX": 160.0,
+                  "websiteY": 155.0,
+                  "addressX": 160.0,
+                  "addressY": 175.0
                 }
               ]
             }
@@ -212,6 +294,27 @@ object GeminiService {
                             visibleList.addAll(listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website"))
                         }
 
+                        val cardShape = obj.optString("cardShape", "ROUNDED_RECTANGLE")
+                        val layoutArrangement = obj.optString("layoutArrangement", "CLASSIC_REAR_QR")
+                        
+                        val fullNameX = if (obj.has("fullNameX")) obj.optDouble("fullNameX").toFloat() else null
+                        val fullNameY = if (obj.has("fullNameY")) obj.optDouble("fullNameY").toFloat() else null
+                        val fullNameSize = if (obj.has("fullNameSize")) obj.optDouble("fullNameSize").toFloat() else null
+                        val jobTitleX = if (obj.has("jobTitleX")) obj.optDouble("jobTitleX").toFloat() else null
+                        val jobTitleY = if (obj.has("jobTitleY")) obj.optDouble("jobTitleY").toFloat() else null
+                        val jobTitleSize = if (obj.has("jobTitleSize")) obj.optDouble("jobTitleSize").toFloat() else null
+                        val companyNameX = if (obj.has("companyNameX")) obj.optDouble("companyNameX").toFloat() else null
+                        val companyNameY = if (obj.has("companyNameY")) obj.optDouble("companyNameY").toFloat() else null
+                        val companyNameSize = if (obj.has("companyNameSize")) obj.optDouble("companyNameSize").toFloat() else null
+                        val mobileX = if (obj.has("mobileX")) obj.optDouble("mobileX").toFloat() else null
+                        val mobileY = if (obj.has("mobileY")) obj.optDouble("mobileY").toFloat() else null
+                        val emailX = if (obj.has("emailX")) obj.optDouble("emailX").toFloat() else null
+                        val emailY = if (obj.has("emailY")) obj.optDouble("emailY").toFloat() else null
+                        val websiteX = if (obj.has("websiteX")) obj.optDouble("websiteX").toFloat() else null
+                        val websiteY = if (obj.has("websiteY")) obj.optDouble("websiteY").toFloat() else null
+                        val addressX = if (obj.has("addressX")) obj.optDouble("addressX").toFloat() else null
+                        val addressY = if (obj.has("addressY")) obj.optDouble("addressY").toFloat() else null
+
                         optionsList.add(CardDesignOption(
                             themeName = themeName,
                             backgroundColor = bgColor,
@@ -221,7 +324,26 @@ object GeminiService {
                             qrCodeVisible = qrCodeVisible,
                             qrX = qrCodeX,
                             qrY = qrCodeY,
-                            visibleFields = visibleList
+                            visibleFields = visibleList,
+                            cardShape = cardShape,
+                            layoutArrangement = layoutArrangement,
+                            fullNameX = fullNameX,
+                            fullNameY = fullNameY,
+                            fullNameSize = fullNameSize,
+                            jobTitleX = jobTitleX,
+                            jobTitleY = jobTitleY,
+                            jobTitleSize = jobTitleSize,
+                            companyNameX = companyNameX,
+                            companyNameY = companyNameY,
+                            companyNameSize = companyNameSize,
+                            mobileX = mobileX,
+                            mobileY = mobileY,
+                            emailX = emailX,
+                            emailY = emailY,
+                            websiteX = websiteX,
+                            websiteY = websiteY,
+                            addressX = addressX,
+                            addressY = addressY
                         ))
                     }
 
@@ -348,9 +470,18 @@ object GeminiService {
             primaryColor = localColor1,
             fontStyle = localFont1,
             qrCodeVisible = true,
-            qrX = 240f,
-            qrY = 110f,
-            visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address")
+            qrX = 260f,
+            qrY = 70f,
+            visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"),
+            cardShape = "ROUNDED_RECTANGLE",
+            layoutArrangement = "CLASSIC_REAR_QR",
+            fullNameX = 20f, fullNameY = 25f, fullNameSize = 19f,
+            jobTitleX = 20f, jobTitleY = 50f, jobTitleSize = 10f,
+            companyNameX = 20f, companyNameY = 75f, companyNameSize = 12f,
+            mobileX = 20f, mobileY = 115f,
+            emailX = 20f, emailY = 135f,
+            websiteX = 20f, websiteY = 155f,
+            addressX = 20f, addressY = 175f
         ))
 
         // Option 2
@@ -361,9 +492,18 @@ object GeminiService {
             primaryColor = localColor2,
             fontStyle = localFont2,
             qrCodeVisible = true,
-            qrX = 240f,
+            qrX = 140f,
             qrY = 110f,
-            visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address")
+            visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website", "address"),
+            cardShape = "LEAF_CUT",
+            layoutArrangement = "CENTER_MINIMALIST",
+            fullNameX = 90f, fullNameY = 65f, fullNameSize = 20f,
+            jobTitleX = 110f, jobTitleY = 90f, jobTitleSize = 10f,
+            companyNameX = 105f, companyNameY = 35f, companyNameSize = 12f,
+            mobileX = 35f, mobileY = 185f,
+            emailX = 130f, emailY = 185f,
+            websiteX = 225f, websiteY = 185f,
+            addressX = 105f, addressY = 205f
         ))
 
         // Option 3
@@ -374,9 +514,18 @@ object GeminiService {
             primaryColor = localColor3,
             fontStyle = localFont3,
             qrCodeVisible = true,
-            qrX = 242f,
-            qrY = 108f,
-            visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website")
+            qrX = 35f,
+            qrY = 65f,
+            visibleFields = listOf("fullName", "jobTitle", "companyName", "mobileNumber", "email", "website"),
+            cardShape = "HEXAGON",
+            layoutArrangement = "MODERN_SPLIT",
+            fullNameX = 160f, fullNameY = 50f, fullNameSize = 19f,
+            jobTitleX = 160f, jobTitleY = 72f, jobTitleSize = 10f,
+            companyNameX = 160f, companyNameY = 25f, companyNameSize = 12f,
+            mobileX = 160f, mobileY = 115f,
+            emailX = 160f, emailY = 135f,
+            websiteX = 160f, websiteY = 155f,
+            addressX = 160f, addressY = 175f
         ))
 
         Thread {

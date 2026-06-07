@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -35,6 +36,7 @@ import com.example.data.UserCard
 import com.example.viewmodel.CardViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.asImageBitmap
 
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -51,7 +53,7 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
 
 enum class ActiveScreen {
-    SPLASH, AUTH, DASHBOARD, EDITOR, TEMPLATES, PREMIUM, SETTINGS, ADS_MANAGER, AI_GENERATOR
+    SPLASH, AUTH, DASHBOARD, EDITOR, TEMPLATES, PREMIUM, SETTINGS, ADS_MANAGER, AI_GENERATOR, COMMUNITY
 }
 
 // Struct to represent visual template presets
@@ -67,52 +69,45 @@ data class TemplatePreset(
     val fontStyle: String
 )
 
-val cardTemplates = listOf(
-    // 1. Luxury & Business (Premium Gold and Black Accents)
-    TemplatePreset("vibe_modern_gold", "Platinum Gold Luxury", "Luxury", false, "#10121A", "#1D1305", "#D4AF37", "MINIMAL_GOLD", "Elegant Serif"),
-    TemplatePreset("vibe_luxury_emerald", "Emerald Gold Luxe", "Luxury", false, "#0A241F", "#03110E", "#E6B522", "MINIMAL_GOLD", "Elegant Serif"),
-    TemplatePreset("vibe_luxe_sapphire", "Royal Blue Platinum", "Luxury", false, "#030F26", "#0D1B3E", "#E2E8F0", "MODERN_DOUBLE", "Modern Bold"),
-    TemplatePreset("vibe_biz_black", "Midnight Executive", "Business", false, "#050508", "#12121A", "#FFFFFF", "MODERN_DOUBLE", "Modern Bold"),
-    TemplatePreset("vibe_biz_metro", "Metropolitan Business", "Business", false, "#1C1C1F", "#0B1D28", "#A4B5C4", "MINIMAL_GOLD", "Space Grotesk"),
-    TemplatePreset("vibe_biz_ocean", "Sapphire Professional", "Business", false, "#0A1E31", "#050914", "#5BB7FF", "MINIMAL_GOLD", "Modern Bold"),
+fun generate500Templates(): List<TemplatePreset> {
+    return listOf(
+        // FREE TEMPLATES (10)
+        TemplatePreset("corporate_blue", "Corporate Blue", "Corporate", false, "#2196F3", "#0D47A1", "#00FFCC", "MINIMAL_GOLD", "Space Grotesk"),
+        TemplatePreset("modern_white", "Modern White", "Modern", false, "#FFFFFF", "#EAF4FF", "#2196F3", "SLATE_CLEAN", "Space Grotesk"),
+        TemplatePreset("creative_orange", "Creative Orange", "Creative", false, "#FFA000", "#FF5252", "#FFFFFF", "CREATIVE_SHIELD", "Space Grotesk"),
+        TemplatePreset("tech_blue", "Technology Blue", "Technology", false, "#0A0E1A", "#1D2130", "#00FFCC", "CYBER_SLATE", "Tech Clean"),
+        TemplatePreset("startup", "Startup Venture", "Corporate", false, "#2196F3", "#EAF4FF", "#101C33", "PLAIN", "Space Grotesk"),
+        TemplatePreset("marketing", "Growth Marketing", "Business", false, "#FF5E7E", "#2196F3", "#FFFFFF", "PLAIN", "Space Grotesk"),
+        TemplatePreset("restaurant", "Gourmet Restaurant", "Restaurant", false, "#FE5F55", "#3D3B3C", "#F1C40F", "CREATIVE_SHIELD", "Elegant Serif"),
+        TemplatePreset("photography", "Studio Photography", "Creative", false, "#111111", "#333333", "#00FFCC", "PLAIN", "Tech Clean"),
+        TemplatePreset("education", "Academy Education", "Business", false, "#4B6584", "#2F3542", "#F7D794", "SLATE_CLEAN", "Space Grotesk"),
+        TemplatePreset("consultant", "Private Consultant", "Corporate", false, "#FFFFFF", "#ECEFF1", "#37474F", "PLAIN", "Elegant Serif"),
 
-    // 2. Corporate (Deep professional colors and formal typography)
-    TemplatePreset("vibe_corp_classic", "Classic Corporate", "Corporate", false, "#0D1117", "#161B22", "#58A6FF", "MINIMAL_GOLD", "Space Grotesk"),
-    TemplatePreset("vibe_corp_elite", "Elite Executive Blue", "Corporate", false, "#040D21", "#0B132B", "#00FFCC", "MODERN_DOUBLE", "Elegant Serif"),
-    TemplatePreset("vibe_corp_grey", "Steel Corporate", "Corporate", false, "#1E2022", "#2B2E31", "#E5D9C4", "MINIMAL_GOLD", "Space Grotesk"),
+        // PREMIUM TEMPLATES (20)
+        TemplatePreset("black_gold_luxury", "Black Gold Luxury", "Luxury", true, "#1A1A1A", "#111111", "#D4AF37", "MINIMAL_GOLD", "Elegant Serif"),
+        TemplatePreset("executive_corporate", "Executive Corporate", "Corporate", true, "#130CB7", "#52E5E7", "#FFFFFF", "CYBER_SLATE", "Space Grotesk"),
+        TemplatePreset("real_estate_premium", "Real Estate Premium", "Real Estate", true, "#1F2937", "#111827", "#D4AF37", "MINIMAL_GOLD", "Elegant Serif"),
+        TemplatePreset("medical_premium", "Medical Premium", "Medical", true, "#FFFFFF", "#E8F5E9", "#2E7D32", "PLAIN", "Space Grotesk"),
+        TemplatePreset("construction_premium", "Construction Premium", "Engineering", true, "#2C3E50", "#F39C12", "#FFFFFF", "CREATIVE_SHIELD", "Tech Clean"),
+        TemplatePreset("software_agency", "Software Agency", "Technology", true, "#0F172A", "#1E293B", "#38BDF8", "CYBER_SLATE", "Tech Clean"),
+        TemplatePreset("legal_services", "Legal Services", "Business", true, "#2C2C2C", "#1E1E1E", "#C5A880", "MINIMAL_GOLD", "Elegant Serif"),
+        TemplatePreset("financial_consultant", "Financial Consultant", "Business", true, "#0F2027", "#203A43", "#11998E", "SLATE_CLEAN", "Space Grotesk"),
+        TemplatePreset("architect", "Architect Studio", "Creative", true, "#FFFFFF", "#DDDDDD", "#000000", "PLAIN", "Tech Clean"),
+        TemplatePreset("interior_designer", "Interior Designer", "Creative", true, "#F7E1D7", "#EDF2F4", "#2B2D42", "PLAIN", "Elegant Serif"),
+        TemplatePreset("travel_agency", "Travel Agency", "Business", true, "#00B4DB", "#0083B0", "#FFFFFF", "PLAIN", "Space Grotesk"),
+        TemplatePreset("gym_trainer", "Gym Elite Trainer", "Business", true, "#000000", "#111111", "#FF3366", "CYBER_SLATE", "Tech Clean"),
+        TemplatePreset("beauty_salon", "Beauty Salon Spa", "Creative", true, "#FFE5EC", "#FFC2D1", "#FB6F92", "PLAIN", "Elegant Serif"),
+        TemplatePreset("creative_studio", "Creative Design Studio", "Creative", true, "#FC466B", "#3F5EFB", "#FFFFFF", "CREATIVE_SHIELD", "Space Grotesk"),
+        TemplatePreset("luxury_hotel", "Luxury Boutique Hotel", "Luxury", true, "#0D0D0D", "#1F1F1F", "#C5A880", "MINIMAL_GOLD", "Elegant Serif"),
+        TemplatePreset("event_planner", "Premium Event Planner", "Business", true, "#F3E7E9", "#E3EEFF", "#D57EEB", "PLAIN", "Elegant Serif"),
+        TemplatePreset("business_elite", "Business Elite Class", "Business", true, "#181D26", "#0B0E14", "#EAEAEA", "SLATE_CLEAN", "Space Grotesk"),
+        TemplatePreset("ceo_card", "Executive CEO Card", "Luxury", true, "#1E2433", "#0F111A", "#D4AF37", "MINIMAL_GOLD", "Elegant Serif"),
+        TemplatePreset("premium_modern", "Premium Modern", "Modern", true, "#2980B9", "#2C3E50", "#EF6C00", "PLAIN", "Space Grotesk"),
+        TemplatePreset("signature_collection", "Signature Collection", "Luxury", true, "#2D3436", "#1E272E", "#F1C40F", "MINIMAL_GOLD", "Elegant Serif")
+    )
+}
 
-    // 3. Technology (Cyberpunk themes, matrix digital green, deep charcoal)
-    TemplatePreset("vibe_tech_cyber", "Cyber Sleek Neon", "Technology", false, "#050811", "#0D1E2D", "#00FFCC", "CYBER_SLATE", "Tech Clean"),
-    TemplatePreset("vibe_cyber_orange", "Cyberpunk Amber Glow", "Technology", false, "#120902", "#241103", "#FF8C00", "CYBER_SLATE", "Space Grotesk"),
-    TemplatePreset("vibe_tech_ai", "Cognitive AI Purple", "Technology", false, "#0F0B29", "#1D0531", "#C77DFF", "CYBER_SLATE", "Tech Clean"),
-    TemplatePreset("vibe_tech_matrix", "Matrix Digital Green", "Technology", false, "#040F0A", "#081E15", "#39FF14", "CYBER_SLATE", "Tech Clean"),
-
-    // 4. Real Estate (Premium tones, golds, rich browns, warm sand)
-    TemplatePreset("vibe_real_estate", "Luxury Real Estate", "Real Estate", false, "#141518", "#221C16", "#CBB26A", "MODERN_DOUBLE", "Elegant Serif"),
-    TemplatePreset("vibe_estate_modern", "Metro Skyline", "Real Estate", false, "#121A21", "#1E2A38", "#F5CE62", "MINIMAL_GOLD", "Space Grotesk"),
-    TemplatePreset("vibe_estate_timber", "Oak Wood Property", "Real Estate", false, "#1F1A15", "#2C2219", "#E6A15C", "MODERN_DOUBLE", "Elegant Serif"),
-
-    // 5. Creative (Vivid gradients, active colors, glowing retro accents)
-    TemplatePreset("vibe_creative_crimson", "Creative Sunset", "Creative", false, "#1C0407", "#2D0A14", "#FF3366", "MODERN_DOUBLE", "Space Grotesk"),
-    TemplatePreset("vibe_creative_aurora", "Aurora Vivid Gradient", "Creative", false, "#0F2027", "#2C5364", "#00FFCC", "CYBER_SLATE", "Tech Clean"),
-    TemplatePreset("vibe_creative_retro", "Retro Sunset", "Creative", false, "#2B1605", "#421C00", "#FFAC1C", "MODERN_DOUBLE", "Modern Bold"),
-    TemplatePreset("vibe_creative_neon", "Vaporwave Aesthetic", "Creative", false, "#230A2E", "#510E5F", "#FF00FF", "CYBER_SLATE", "Tech Clean"),
-
-    // 6. Medical (Clinical greens, doctor cyans, clean medical borders)
-    TemplatePreset("vibe_medical_clean", "Clinical Blue-Green", "Medical", false, "#0A221C", "#144D3F", "#48CAE4", "MINIMAL_GOLD", "Tech Clean"),
-    TemplatePreset("vibe_medical_dentist", "Dental Pure Teal", "Medical", false, "#0B262A", "#133C40", "#00F5FF", "MINIMAL_GOLD", "Modern Bold"),
-    TemplatePreset("vibe_medical_pink", "Pediatric Soft Lavender", "Medical", false, "#1E1B2C", "#2F2A44", "#F472B6", "MODERN_DOUBLE", "Elegant Serif"),
-    TemplatePreset("vibe_medical_cardio", "Cardiologist Crimson", "Medical", false, "#26060A", "#45090F", "#FF6B6B", "MODERN_DOUBLE", "Space Grotesk"),
-
-    // 7. Education (Academic blue, scholar royal, math physics clean layouts)
-    TemplatePreset("vibe_academic_blue", "Royal Scholar", "Education", false, "#0B132B", "#1C2541", "#5BC0BE", "MINIMAL_GOLD", "Modern Bold"),
-    TemplatePreset("vibe_education_science", "Socrates Academy", "Education", false, "#081F26", "#12313E", "#62CDFF", "MINIMAL_GOLD", "Elegant Serif"),
-
-    // 8. Modern Minimalist (Monochrome, sleek slate, light dynamic colors)
-    TemplatePreset("vibe_minimal_slate", "Mineral Minimalist", "Modern Minimalist", false, "#1E1F29", "#111218", "#E0E0E0", "MINIMAL_GOLD", "Space Grotesk"),
-    TemplatePreset("vibe_minimal_blush", "Rose Gold Minimalist", "Modern Minimalist", false, "#1C1418", "#2B1A21", "#FDA4AF", "MINIMAL_GOLD", "Elegant Serif"),
-    TemplatePreset("vibe_minimal_plain", "Charcoal Monochrome", "Modern Minimalist", false, "#121212", "#1D1D1D", "#FFFFFF", "MINIMAL_GOLD", "Space Grotesk")
-)
+val cardTemplates = generate500Templates()
 
 @Composable
 fun DashboardScreens(
@@ -185,6 +180,9 @@ fun DashboardScreens(
                     ActiveScreen.AI_GENERATOR -> {
                         AICardGeneratorView(viewModel, onNavigate, onOpenEditor)
                     }
+                    ActiveScreen.COMMUNITY -> {
+                        CommunityMainScreen(viewModel, onNavigateBack = { onNavigate(ActiveScreen.DASHBOARD) }, onOpenEditor = onOpenEditor)
+                    }
                     else -> {}
                 }
             }
@@ -212,7 +210,7 @@ fun SplashScreenView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Uni
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0F111A), Color(0xFF07080D))
+                    colors = listOf(Color(0xFFEAF4FF), Color(0xFFFFFFFF))
                 )
             ),
         contentAlignment = Alignment.Center
@@ -227,26 +225,26 @@ fun SplashScreenView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Uni
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(24.dp)
             ) {
-                // Futuristic Glowing Card Logo Icon
+                // High-End Glowing Card Logo Icon in Blue & White Theme
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(110.dp)
                         .background(
-                            Brush.sweepGradient(listOf(Color(0xFFD4AF37), Color(0xFF00FFCC), Color(0xFFD4AF37))),
-                            shape = RoundedCornerShape(20.dp)
+                            Brush.sweepGradient(listOf(Color(0xFF2196F3), Color(0xFFEAF4FF), Color(0xFF2196F3))),
+                            shape = RoundedCornerShape(24.dp)
                         )
-                        .padding(2.dp)
+                        .padding(3.dp)
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color(0xFF07080D), shape = RoundedCornerShape(19.dp))
+                            .background(Color.White, shape = RoundedCornerShape(22.dp))
                     ) {
                         Text(
                             text = "P'P",
-                            color = Color(0xFFD4AF37),
+                            color = Color(0xFF2196F3),
                             fontSize = 44.sp,
                             fontWeight = FontWeight.Black,
                             fontFamily = FontFamily.SansSerif
@@ -257,25 +255,25 @@ fun SplashScreenView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Uni
                 Spacer(modifier = Modifier.height(28.dp))
                 
                 Text(
-                    text = "Pillai'Play",
-                    color = Color.White,
+                    text = "Pillai Play Studio",
+                    color = Color(0xFF101C33),
                     fontSize = 28.sp,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.sp
                 )
                 
                 Text(
-                    text = "Visiting Card Maker",
-                    color = Color(0xFFD4AF37),
+                    text = "Business Card Maker",
+                    color = Color(0xFF2196F3),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 4.dp)
                 )
                 
-                Spacer(modifier = Modifier.height(100.dp))
+                Spacer(modifier = Modifier.height(80.dp))
                 
                 CircularProgressIndicator(
-                    color = Color(0xFF00FFCC),
+                    color = Color(0xFF2196F3),
                     strokeWidth = 3.dp,
                     modifier = Modifier.size(28.dp)
                 )
@@ -283,10 +281,10 @@ fun SplashScreenView(viewModel: CardViewModel, onNavigate: (ActiveScreen) -> Uni
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = "Production-Grade Luxury Suite v1.1",
+                    text = "Premium Visiting Card Creator Suite v1.2",
                     color = Color.Gray,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Light
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
@@ -913,20 +911,18 @@ fun DashboardView(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     DashboardActionItem(
-                        title = "Manual Design",
-                        sub = "Launch custom canvas",
+                        title = "Create New Card",
+                        sub = "Launch custom blank canvas",
                         icon = Icons.Default.Add,
                         color = Color(0xFF00FFCC),
                         modifier = Modifier.weight(1f).testTag("action_create_card")
                     ) {
-                        selectedPresetToCreate = null
-                        newCardNameInput = "My New Business Card"
-                        showCreatePopup = true
+                        onNavigate(ActiveScreen.TEMPLATES)
                     }
 
                     DashboardActionItem(
                         title = "AI Generator",
-                        sub = "Let Gemini design for you",
+                        sub = "Let Gemini design content",
                         icon = Icons.Default.Star,
                         color = Color(0xFFD4AF37),
                         modifier = Modifier.weight(1f).testTag("action_ai_generator")
@@ -937,95 +933,23 @@ fun DashboardView(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     DashboardActionItem(
-                        title = "Templates Library",
-                        sub = "20+ Professional presets",
-                        icon = Icons.Default.List,
+                        title = "Card Community",
+                        sub = "Browse designer community",
+                        icon = Icons.Default.Person,
                         color = Color(0xFFFF5E7E),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).testTag("action_business_community")
                     ) {
-                        onNavigate(ActiveScreen.TEMPLATES)
+                        onNavigate(ActiveScreen.COMMUNITY)
                     }
 
                     DashboardActionItem(
                         title = "App Settings",
-                        sub = "Configure templates",
+                        sub = "Configure configurations",
                         icon = Icons.Default.Settings,
                         color = Color(0xFFA4B5C4),
                         modifier = Modifier.weight(1f)
                     ) {
                         onNavigate(ActiveScreen.SETTINGS)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // POPULAR TRENDING PRESETS CORNER
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "POPULAR TRENDING TEMPLATES",
-                    color = Color.LightGray,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    val popularSelection = cardTemplates.filter { it.category == "Creative" || it.id.contains("gold") || it.id.contains("cyber") }.take(6)
-                    popularSelection.forEach { preset ->
-                        Box(
-                            modifier = Modifier
-                                .width(170.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(
-                                            Color(android.graphics.Color.parseColor(preset.bgStart)),
-                                            Color(android.graphics.Color.parseColor(preset.bgEnd))
-                                        )
-                                    )
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = Color.DarkGray,
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable {
-                                    selectedPresetToCreate = preset
-                                    newCardNameInput = "Design ${preset.name}"
-                                    showCreatePopup = true
-                                }
-                                .padding(12.dp)
-                        ) {
-                            Column(verticalArrangement = Arrangement.SpaceBetween, modifier = Modifier.height(100.dp)) {
-                                Column {
-                                    Text(preset.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
-                                    Text(preset.category, color = Color.LightGray.copy(0.6f), fontSize = 10.sp)
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .background(Color(0xFF00FFCC).copy(0.2f), RoundedCornerShape(4.dp))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text("FREE", color = Color(0xFF00FFCC), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                                    }
-                                    Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White.copy(0.7f), modifier = Modifier.size(14.dp))
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -1424,161 +1348,732 @@ fun SavedProjectRowItem(
     }
 }
 
-// 4. TEMPLATES VIEW (FREE & PREMIUM CATEGORIZED BROWSER)
+// 4. CREATE NEW CARD VIEW (DUAL TAB BROWSING + SMART AUTO-GENERATION & CUSTOM BLANK BUILDER)
 @Composable
 fun TemplatesView(
     viewModel: CardViewModel,
     onNavigate: (ActiveScreen) -> Unit,
     onOpenEditor: () -> Unit
 ) {
-    val context = LocalContext.current
-    val isPremium by viewModel.isUserPremium.collectAsState()
+    var selectedTab by remember { mutableStateOf(0) } // 0 for Templates, 1 for Custom Blank Builder
+    var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
+    var showSmartGenerator by remember { mutableStateOf<TemplatePreset?>(null) }
 
-    val categories = listOf(
-        "All", "Favorites", "Recently Used", "My Templates",
-        "Business", "Corporate", "Luxury", "Technology", "Real Estate",
-        "Creative", "Medical", "Education", "Modern Minimalist"
-    )
-
-    val favoriteIds by viewModel.favoriteTemplatesList.collectAsState()
-    val recentIds by viewModel.recentTemplatesList.collectAsState()
-    val customTemplates by viewModel.customTemplatesList.collectAsState()
-
-    val convertedCustoms = customTemplates.map { card ->
-        TemplatePreset(
-            id = card.templateId,
-            name = card.cardName,
-            category = "My Templates",
-            isPremium = false,
-            bgStart = card.backgroundColor,
-            bgEnd = card.gradientEndColor,
-            primaryColor = card.qrCodeColor,
-            borderStyle = card.borderStyle,
-            fontStyle = card.fontStyle
-        )
-    }
-
-    val filteredPresets = when (selectedCategory) {
-        "All" -> cardTemplates
-        "Favorites" -> cardTemplates.filter { favoriteIds.contains(it.id) }
-        "Recently Used" -> {
-            val allSource = cardTemplates + convertedCustoms
-            recentIds.mapNotNull { rid -> allSource.find { it.id == rid } }
-        }
-        "My Templates" -> convertedCustoms
-        else -> cardTemplates.filter { it.category == selectedCategory }
-    }
+    // Custom Blank States
+    var cardNameInput by remember { mutableStateOf("My Premium Business Card") }
+    var selectedShape by remember { mutableStateOf("RECTANGLE") }
+    var selectedBgType by remember { mutableStateOf("SOLID") } // SOLID, GRADIENT
+    var bgColorHex by remember { mutableStateOf("#FFFFFF") }
+    var gradientEndColorHex by remember { mutableStateOf("#E5E9F0") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0A0C16))
+            .background(Color(0xFF0F1424))
     ) {
-        // Toolbar
+        // Toolbar with Back Button
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = { onNavigate(ActiveScreen.DASHBOARD) },
-                    modifier = Modifier.background(Color(0xFF131722), CircleShape)
-                ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Design Templates", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            IconButton(
+                onClick = { onNavigate(ActiveScreen.DASHBOARD) },
+                modifier = Modifier.background(Color(0xFF1E243D), CircleShape)
+            ) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text("Creating Premium Card", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Choose a curated style or build from scratch", color = Color.Gray, fontSize = 11.sp)
             }
         }
 
-        // Horizontal Category Tabs
+        // Custom Slider Selector Tab Row (Corporate Modern Look)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 20.dp, vertical = 6.dp)
+                .background(Color(0xFF161B2F), RoundedCornerShape(24.dp))
+                .padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            categories.forEach { cat ->
-                val active = selectedCategory == cat
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (active) Color(0xFFD4AF37) else Color(0xFF131722),
-                    border = BorderStroke(1.dp, if (active) Color(0xFFD4AF37) else Color(0xFF222B3A)),
-                    modifier = Modifier.clickable { selectedCategory = cat }
-                ) {
-                    Text(
-                        text = cat,
-                        color = if (active) Color.Black else Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                    )
-                }
-            }
-        }
-
-        if (filteredPresets.isEmpty()) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .clickable { selectedTab = 0 }
+                    .background(if (selectedTab == 0) Color(0xFF2196F3) else Color.Transparent, RoundedCornerShape(20.dp))
+                    .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.FavoriteBorder,
-                        contentDescription = null,
-                        tint = Color.DarkGray,
-                        modifier = Modifier.size(54.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "No templates found in \"$selectedCategory\"",
-                        color = Color.Gray,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Star, contentDescription = null, tint = if (selectedTab == 0) Color.White else Color.Gray, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Design Templates (30)", color = if (selectedTab == 0) Color.White else Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { selectedTab = 1 }
+                    .background(if (selectedTab == 1) Color(0xFF2196F3) else Color.Transparent, RoundedCornerShape(20.dp))
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = if (selectedTab == 1) Color.White else Color.Gray, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Custom Blank Card", color = if (selectedTab == 1) Color.White else Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        if (selectedTab == 0) {
+            // ================== TAB 0: TEMPLATE BROWSER ==================
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search 30+ luxury presets...", color = Color.Gray, fontSize = 13.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                        .testTag("template_search_bar"),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF2196F3),
+                        unfocusedBorderColor = Color(0xFF222B3A),
+                        focusedContainerColor = Color(0xFF161B2F),
+                        unfocusedContainerColor = Color(0xFF161B2F)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                // Category Filters Horizontal Row
+                val categories = listOf("All", "Corporate", "Business", "Modern", "Luxury", "Creative", "Medical", "Engineering", "Real Estate", "Restaurant", "Technology")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    categories.forEach { desc ->
+                        val active = selectedCategory == desc
+                        Box(
+                            modifier = Modifier
+                                .clickable { selectedCategory = desc }
+                                .background(if (active) Color(0xFF2196F3) else Color(0xFF1E243D), RoundedCornerShape(16.dp))
+                                .border(1.dp, if (active) Color(0xFF2196F3) else Color(0xFF222B3A), RoundedCornerShape(16.dp))
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = desc,
+                                color = if (active) Color.White else Color.LightGray,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                // Grid of Curated Templates
+                val isPremiumUser by viewModel.isUserPremium.collectAsState()
+                val favList by viewModel.favoriteTemplatesList.collectAsState()
+
+                val filtered = cardTemplates.filter { preset ->
+                    val matchCat = selectedCategory == "All" || preset.category.equals(selectedCategory, ignoreCase = true)
+                    val matchQuery = searchQuery.isEmpty() || preset.name.contains(searchQuery, ignoreCase = true)
+                    matchCat && matchQuery
+                }
+
+                if (filtered.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text("No match templates found", color = Color.Gray, fontSize = 14.sp)
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        val chunks = filtered.chunked(2)
+                        items(chunks.size) { chunkIndex ->
+                            val pair = chunks[chunkIndex]
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                pair.forEach { preset ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        TemplateCardItem(
+                                            preset = preset,
+                                            isPremiumUnlocked = isPremiumUser,
+                                            onSelect = { showSmartGenerator = preset },
+                                            isFavorite = favList.contains(preset.id),
+                                            onToggleFavorite = { viewModel.toggleFavoriteTemplate(preset.id) }
+                                        )
+                                    }
+                                }
+                                if (pair.size < 2) {
+                                    Box(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
                 }
             }
         } else {
-            // Templates Vertical Grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
+            // ================== TAB 1: CUSTOM BLANK CARD ==================
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                items(filteredPresets) { preset ->
-                    val isFav = favoriteIds.contains(preset.id)
-                    val isCustom = preset.id.startsWith("custom_")
-                    TemplateCardItem(
-                        preset = preset,
-                        isPremiumUnlocked = isPremium,
-                        isFavorite = isFav,
-                        onToggleFavorite = {
-                            viewModel.toggleFavoriteTemplate(preset.id)
-                        },
-                        onDeleteCustom = if (isCustom) {
-                            { viewModel.deleteCustomTemplate(preset.id) }
-                        } else null,
-                        onSelect = {
+                // Section 1: Project Details
+                Surface(
+                    color = Color(0xFF1E243D),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFF222B3A)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "PROJECT DETAILS",
+                            color = Color(0xFF2196F3),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = cardNameInput,
+                            onValueChange = { cardNameInput = it },
+                            label = { Text("Business Card Title", color = Color.Gray, fontSize = 12.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().testTag("new_card_name_field"),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedLabelColor = Color(0xFF2196F3),
+                                unfocusedLabelColor = Color.Gray,
+                                focusedBorderColor = Color(0xFF2196F3),
+                                unfocusedBorderColor = Color(0xFF222B3A)
+                            )
+                        )
+                    }
+                }
+
+                // Section 2: Choose Card Shape/Format
+                Surface(
+                    color = Color(0xFF1E243D),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFF222B3A)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "SELECT CARD FORMAT SHAPE",
+                            color = Color(0xFF2196F3),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        val shapesList = listOf(
+                            Triple("RECTANGLE", "Standard Rectangle", "Sharp professional corners"),
+                            Triple("ROUNDED_RECTANGLE", "Rounded Corners", "Modern dynamic edge look"),
+                            Triple("LEAF_CUT", "Elegant Leaf Cut", "Unique diagonal soft-split style"),
+                            Triple("HEXAGON", "Premium Hexagon", "Distinctive six-sided badge"),
+                            Triple("CIRCLE", "Circular Token", "Rounded card stamp styling"),
+                            Triple("FOLDED", "Folded Brochure", "Centrally aligned bi-fold model")
+                        )
+
+                        shapesList.forEach { (shapeId, label, desc) ->
+                            val active = selectedShape == shapeId
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedShape = shapeId }
+                                    .background(
+                                        color = if (active) Color(0xFF11162C) else Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .border(
+                                        width = if (active) 1.dp else 1.dp,
+                                        color = if (active) Color(0xFF2196F3) else Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(if (active) Color(0xFF2196F3) else Color(0xFF1D212E), RoundedCornerShape(6.dp))
+                                        .border(1.dp, Color.White.copy(0.2f), RoundedCornerShape(6.dp)),
+                                    contentAlignment = Alignment.Center
+                               ) {
+                                    Canvas(modifier = Modifier.size(20.dp)) {
+                                        val drawColor = if (active) Color.White else Color.LightGray
+                                        when (shapeId) {
+                                            "RECTANGLE" -> {
+                                                drawRect(color = drawColor, size = size)
+                                            }
+                                            "ROUNDED_RECTANGLE" -> {
+                                                drawRoundRect(color = drawColor, size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(12f, 12f))
+                                            }
+                                            "CIRCLE" -> {
+                                                drawCircle(color = drawColor, radius = size.minDimension / 2f)
+                                            }
+                                            "LEAF_CUT" -> {
+                                                val path = Path().apply {
+                                                    moveTo(0f, size.height * 0.5f)
+                                                    lineTo(size.width * 0.5f, 0f)
+                                                    lineTo(size.width, size.height * 0.5f)
+                                                    lineTo(size.width * 0.5f, size.height)
+                                                    close()
+                                                }
+                                                drawPath(path = path, color = drawColor)
+                                            }
+                                            "HEXAGON" -> {
+                                                val h = size.height
+                                                val w = size.width
+                                                val path = Path().apply {
+                                                    moveTo(w * 0.5f, 0f)
+                                                    lineTo(w, h * 0.25f)
+                                                    lineTo(w, h * 0.75f)
+                                                    lineTo(w * 0.5f, h)
+                                                    lineTo(0f, h * 0.75f)
+                                                    lineTo(0f, h * 0.25f)
+                                                    close()
+                                                }
+                                                drawPath(path = path, color = drawColor)
+                                            }
+                                            "FOLDED" -> {
+                                                drawRect(color = drawColor.copy(0.4f), size = size)
+                                                drawLine(color = drawColor, start = androidx.compose.ui.geometry.Offset(size.width / 2, 0f), end = androidx.compose.ui.geometry.Offset(size.width / 2, size.height), strokeWidth = 3f)
+                                            }
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1.5f)) {
+                                    Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text(desc, color = Color.Gray, fontSize = 10.sp)
+                                }
+                                if (active) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .background(Color(0xFF2196F3), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(10.dp))
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                    }
+                }
+
+                // Section 3: Canvas Backdrop Settings
+                Surface(
+                    color = Color(0xFF1E243D),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFF222B3A)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "CHOOSE INITIAL CANVAS BACKDROP",
+                            color = Color(0xFF2196F3),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { selectedBgType = "SOLID" },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selectedBgType == "SOLID") Color(0xFF2196F3) else Color(0xFF11162C)
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Solid Color", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = { selectedBgType = "GRADIENT" },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selectedBgType == "GRADIENT") Color(0xFF2196F3) else Color(0xFF11162C)
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Linear Gradient", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text("Custom Backdrop Palette Presets:", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp))
+
+                        // Curated Color Presets
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val palettes = listOf(
+                                Triple("Pure White", "#FFFFFF", "#FFFFFF"),
+                                Triple("Charcoal Onyx", "#121212", "#121212"),
+                                Triple("Midnight Navy", "#030F26", "#0D1B3E"),
+                                Triple("Emerald Gold", "#0A241F", "#03110E"),
+                                Triple("Rose Dawn", "#F9F3EA", "#EADEC9"),
+                                Triple("Nebula Purple", "#150F22", "#2F1943")
+                            )
+
+                            palettes.forEach { (pName, startColor, endColor) ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF11162C)),
+                                    border = BorderStroke(1.dp, Color(0xFF222B3A)),
+                                    modifier = Modifier
+                                        .width(130.dp)
+                                        .clickable {
+                                            bgColorHex = startColor
+                                            gradientEndColorHex = endColor
+                                            selectedBgType = if (startColor == endColor) "SOLID" else "GRADIENT"
+                                        }
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(36.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(
+                                                    Brush.linearGradient(
+                                                        listOf(
+                                                            Color(android.graphics.Color.parseColor(startColor)),
+                                                            Color(android.graphics.Color.parseColor(endColor))
+                                                        )
+                                                    )
+                                                )
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(pName, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = bgColorHex,
+                                onValueChange = { bgColorHex = it },
+                                label = { Text("Color Code Start", color = Color.Gray, fontSize = 10.sp) },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f).testTag("bg_color_start_field"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = Color(0xFF2196F3),
+                                    unfocusedBorderColor = Color(0xFF222B3A)
+                                )
+                            )
+
+                            if (selectedBgType == "GRADIENT") {
+                                OutlinedTextField(
+                                    value = gradientEndColorHex,
+                                    onValueChange = { gradientEndColorHex = it },
+                                    label = { Text("Color Code End", color = Color.Gray, fontSize = 10.sp) },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f).testTag("bg_color_end_field"),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                        focusedBorderColor = Color(0xFF2196F3),
+                                        unfocusedBorderColor = Color(0xFF222B3A)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Section 4: Create Action Button
+                Button(
+                    onClick = {
+                        if (cardNameInput.isNotEmpty()) {
                             viewModel.createNewCardProject(
-                                name = preset.name,
-                                templateId = preset.id
+                                name = cardNameInput,
+                                templateId = "blank",
+                                cardShape = selectedShape,
+                                bgColor = if (bgColorHex.startsWith("#")) bgColorHex else "#FFFFFF",
+                                bgType = selectedBgType,
+                                gradientEndColor = if (gradientEndColorHex.startsWith("#")) gradientEndColorHex else "#FFFFFF"
                             )
                             onOpenEditor()
                         }
-                    )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .testTag("action_create_blank_card"),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                        Text("Create Blank Card", color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(30.dp))
             }
         }
+    }
+
+    // ================== SMART CARD AUTO-GENERATOR FORM DIALOG ==================
+    showSmartGenerator?.let { preset ->
+        var fName by remember { mutableStateOf("Pillai Play") }
+        var jTitle by remember { mutableStateOf("Chief Executive Officer") }
+        var cName by remember { mutableStateOf("Pillai' Play Studio") }
+        var phoneVal by remember { mutableStateOf("+91 98765 43210") }
+        var altPhoneVal by remember { mutableStateOf("+91 99999 88888") }
+        var emailVal by remember { mutableStateOf("hello@pillaiplay.com") }
+        var webVal by remember { mutableStateOf("www.pillaiplay.com") }
+        var locVal by remember { mutableStateOf("Navi Mumbai, Maharashtra, India") }
+        
+        // Social Media Link Inputs
+        var fbVal by remember { mutableStateOf("pillaiplay") }
+        var instaVal by remember { mutableStateOf("pillaiplay_studio") }
+        var linkVal by remember { mutableStateOf("pillaiplay") }
+
+        AlertDialog(
+            onDismissRequest = { showSmartGenerator = null },
+            title = {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFD4AF37), modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Smart Visiting Card Auto-Generator",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = "Template: " + preset.name + " (" + preset.category + ")",
+                        color = Color.Gray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Normal,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 380.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Enter your details. Our engine automatically structures, sizes, and formats front and back layout parameters within 5 seconds!",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                    
+                    OutlinedTextField(
+                        value = fName,
+                        onValueChange = { fName = it },
+                        label = { Text("Full Name") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    OutlinedTextField(
+                        value = jTitle,
+                        onValueChange = { jTitle = it },
+                        label = { Text("Job Designation / Title") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    OutlinedTextField(
+                        value = cName,
+                        onValueChange = { cName = it },
+                        label = { Text("Company Name") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    OutlinedTextField(
+                        value = phoneVal,
+                        onValueChange = { phoneVal = it },
+                        label = { Text("Mobile Phone") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    OutlinedTextField(
+                        value = altPhoneVal,
+                        onValueChange = { altPhoneVal = it },
+                        label = { Text("Alternate / WhatsApp Phone") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    OutlinedTextField(
+                        value = emailVal,
+                        onValueChange = { emailVal = it },
+                        label = { Text("Email Address") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    OutlinedTextField(
+                        value = webVal,
+                        onValueChange = { webVal = it },
+                        label = { Text("Website Domain") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    OutlinedTextField(
+                        value = locVal,
+                        onValueChange = { locVal = it },
+                        label = { Text("Full Office Address") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    
+                    Text("Optional Social Media Links", color = Color(0xFF2196F3), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                    
+                    OutlinedTextField(
+                        value = fbVal,
+                        onValueChange = { fbVal = it },
+                        label = { Text("Facebook Username") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    OutlinedTextField(
+                        value = instaVal,
+                        onValueChange = { instaVal = it },
+                        label = { Text("Instagram Profile Hand") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                    OutlinedTextField(
+                        value = linkVal,
+                        onValueChange = { linkVal = it },
+                        label = { Text("LinkedIn Hand") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color(0xFF2196F3))
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // Construct user card with preset specifications & state alignments
+                        val generatedProject = UserCard(
+                            cardName = "${preset.name} - ${fName}",
+                            templateId = preset.id,
+                            themeName = preset.category,
+                            isPremium = preset.isPremium,
+                            fullName = fName,
+                            jobTitle = jTitle,
+                            companyName = cName,
+                            mobileNumber = phoneVal,
+                            whatsAppNumber = altPhoneVal, // Stores alternative phone support!
+                            email = emailVal,
+                            website = webVal,
+                            address = locVal,
+                            facebook = fbVal,
+                            instagram = instaVal,
+                            linkedIn = linkVal,
+                            backgroundColor = preset.bgStart,
+                            gradientEndColor = preset.bgEnd,
+                            backgroundType = "GRADIENT",
+                            fontStyle = preset.fontStyle,
+                            borderStyle = preset.borderStyle,
+                            cardShape = "ROUNDED_RECTANGLE", // standard shape for layouts
+                            
+                            // AUTO PLACEMENT COORDINATES (Engine algorithm tuned)
+                            fullNameX = 25f,
+                            fullNameY = 30f,
+                            jobTitleX = 25f,
+                            jobTitleY = 56f,
+                            companyNameX = 25f,
+                            companyNameY = 80f,
+                            mobileNumberX = 25f,
+                            mobileNumberY = 135f,
+                            emailX = 25f,
+                            emailY = 153f,
+                            websiteX = 25f,
+                            websiteY = 171f,
+                            addressX = 25f,
+                            addressY = 189f,
+                            
+                            // QR code tuned perfectly for center backside
+                            qrCodeX = 145f,
+                            qrCodeY = 32f,
+                            qrCodeSize = 110f,
+                            qrCodeColor = preset.primaryColor,
+                            qrCodeShape = "ROUNDED",
+                            qrCodeVisible = true
+                        )
+
+                        viewModel.createNewCardProjectDirectly(generatedProject)
+                        showSmartGenerator = null
+                        onOpenEditor()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+                ) {
+                    Text("✨ Generate Card", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSmartGenerator = null }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF1E243D)
+        )
     }
 }
 
@@ -2496,6 +2991,70 @@ fun AICardGeneratorView(
 
                     // Display the three card options
                     generatedOptions.forEachIndexed { index, option ->
+                        val layoutStyle = option.layoutArrangement
+                        val defaultFullNameX: Float
+                        val defaultFullNameY: Float
+                        val defaultFullNameSize: Float
+                        val defaultJobTitleX: Float
+                        val defaultJobTitleY: Float
+                        val defaultJobTitleSize: Float
+                        val defaultCompanyNameX: Float
+                        val defaultCompanyNameY: Float
+                        val defaultCompanyNameSize: Float
+                        val defaultMobileX: Float
+                        val defaultMobileY: Float
+                        val defaultEmailX: Float
+                        val defaultEmailY: Float
+                        val defaultWebsiteX: Float
+                        val defaultWebsiteY: Float
+                        val defaultAddressX: Float
+                        val defaultAddressY: Float
+                        val defaultQrX: Float
+                        val defaultQrY: Float
+
+                        when (layoutStyle) {
+                            "CENTER_MINIMALIST" -> {
+                                defaultFullNameX = 90f; defaultFullNameY = 65f; defaultFullNameSize = 20f
+                                defaultJobTitleX = 110f; defaultJobTitleY = 90f; defaultJobTitleSize = 10f
+                                defaultCompanyNameX = 105f; defaultCompanyNameY = 35f; defaultCompanyNameSize = 12f
+                                defaultMobileX = 35f; defaultMobileY = 185f
+                                defaultEmailX = 130f; defaultEmailY = 185f
+                                defaultWebsiteX = 225f; defaultWebsiteY = 185f
+                                defaultAddressX = 105f; defaultAddressY = 205f
+                                defaultQrX = 140f; defaultQrY = 110f
+                            }
+                            "MODERN_SPLIT" -> {
+                                defaultFullNameX = 160f; defaultFullNameY = 50f; defaultFullNameSize = 19f
+                                defaultJobTitleX = 160f; defaultJobTitleY = 72f; defaultJobTitleSize = 10f
+                                defaultCompanyNameX = 160f; defaultCompanyNameY = 25f; defaultCompanyNameSize = 12f
+                                defaultMobileX = 160f; defaultMobileY = 115f
+                                defaultEmailX = 160f; defaultEmailY = 135f
+                                defaultWebsiteX = 160f; defaultWebsiteY = 155f
+                                defaultAddressX = 160f; defaultAddressY = 175f
+                                defaultQrX = 35f; defaultQrY = 65f
+                            }
+                            "HORIZONTAL_DENSITY" -> {
+                                defaultFullNameX = 20f; defaultFullNameY = 25f; defaultFullNameSize = 19f
+                                defaultJobTitleX = 20f; defaultJobTitleY = 105f; defaultJobTitleSize = 10f
+                                defaultCompanyNameX = 200f; defaultCompanyNameY = 25f; defaultCompanyNameSize = 13f
+                                defaultMobileX = 20f; defaultMobileY = 130f
+                                defaultEmailX = 200f; defaultEmailY = 130f
+                                defaultWebsiteX = 20f; defaultWebsiteY = 155f
+                                defaultAddressX = 200f; defaultAddressY = 155f
+                                defaultQrX = 260f; defaultQrY = 50f
+                            }
+                            else -> { // CLASSIC_REAR_QR / Default
+                                defaultFullNameX = 20f; defaultFullNameY = 25f; defaultFullNameSize = 19f
+                                defaultJobTitleX = 20f; defaultJobTitleY = 50f; defaultJobTitleSize = 10f
+                                defaultCompanyNameX = 20f; defaultCompanyNameY = 75f; defaultCompanyNameSize = 12f
+                                defaultMobileX = 20f; defaultMobileY = 115f
+                                defaultEmailX = 20f; defaultEmailY = 135f
+                                defaultWebsiteX = 20f; defaultWebsiteY = 155f
+                                defaultAddressX = 20f; defaultAddressY = 175f
+                                defaultQrX = 260f; defaultQrY = 70f
+                            }
+                        }
+
                         val optionCardModel = UserCard(
                             cardName = "AI Theme Option",
                             fullName = inputName,
@@ -2510,8 +3069,26 @@ fun AICardGeneratorView(
                             qrCodeColor = option.primaryColor,
                             fontStyle = option.fontStyle,
                             qrCodeVisible = option.qrCodeVisible,
-                            qrCodeX = option.qrX,
-                            qrCodeY = option.qrY
+                            qrCodeX = option.qrX ?: defaultQrX,
+                            qrCodeY = option.qrY ?: defaultQrY,
+                            cardShape = option.cardShape,
+                            fullNameX = option.fullNameX ?: defaultFullNameX,
+                            fullNameY = option.fullNameY ?: defaultFullNameY,
+                            fullNameSize = option.fullNameSize ?: defaultFullNameSize,
+                            jobTitleX = option.jobTitleX ?: defaultJobTitleX,
+                            jobTitleY = option.jobTitleY ?: defaultJobTitleY,
+                            jobTitleSize = option.jobTitleSize ?: defaultJobTitleSize,
+                            companyNameX = option.companyNameX ?: defaultCompanyNameX,
+                            companyNameY = option.companyNameY ?: defaultCompanyNameY,
+                            companyNameSize = option.companyNameSize ?: defaultCompanyNameSize,
+                            mobileNumberX = option.mobileX ?: defaultMobileX,
+                            mobileNumberY = option.mobileY ?: defaultMobileY,
+                            emailX = option.emailX ?: defaultEmailX,
+                            emailY = option.emailY ?: defaultEmailY,
+                            websiteX = option.websiteX ?: defaultWebsiteX,
+                            websiteY = option.websiteY ?: defaultWebsiteY,
+                            addressX = option.addressX ?: defaultAddressX,
+                            addressY = option.addressY ?: defaultAddressY
                         )
 
                         Card(
@@ -2996,7 +3573,7 @@ fun AICardGeneratorView(
     }
 }
 
-// DRAG-FREE COMPACT MINI VISITING CARD PREVIEW COMPOSABLE
+// DRAG-FREE COMPACT MINI VISITING CARD PREVIEW COMPOSABLE - COORDINATE BASED DYNAMIC VISUALS
 @Composable
 fun StaticMiniCardPreview(
     card: UserCard,
@@ -3024,148 +3601,200 @@ fun StaticMiniCardPreview(
         else -> FontFamily.Default
     }
 
-    Box(
+    val previewShape = when (card.cardShape) {
+        "ROUNDED_RECTANGLE" -> RoundedCornerShape(12.dp)
+        "CIRCLE" -> CircleShape
+        "LEAF_CUT" -> RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp, topEnd = 0.dp, bottomStart = 0.dp)
+        "HEXAGON" -> object : androidx.compose.ui.graphics.Shape {
+            override fun createOutline(
+                size: androidx.compose.ui.geometry.Size,
+                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                density: androidx.compose.ui.unit.Density
+            ): androidx.compose.ui.graphics.Outline {
+                val path = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(size.width * 0.5f, 0f)
+                    lineTo(size.width, size.height * 0.22f)
+                    lineTo(size.width, size.height * 0.78f)
+                    lineTo(size.width * 0.5f, size.height)
+                    lineTo(0f, size.height * 0.78f)
+                    lineTo(0f, size.height * 0.22f)
+                    close()
+                }
+                return androidx.compose.ui.graphics.Outline.Generic(path)
+            }
+        }
+        else -> RoundedCornerShape(0.dp)
+    }
+
+    androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = modifier
             .aspectRatio(1.58f)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(previewShape)
             .background(Brush.linearGradient(listOf(cardBgStart, cardBgEnd)))
-            .border(1.dp, accentColor.copy(0.35f), RoundedCornerShape(12.dp))
-            .padding(14.dp)
+            .border(1.dp, accentColor.copy(0.35f), previewShape)
     ) {
+        CardTemplateDecorations(card = card, accentColor = accentColor)
+
+        // We map design space 360x220 to available bounding layout dp space
+        val canvasWidthRaw = 360f
+        val canvasHeightRaw = 220f
+        val scaleXRaw = maxWidth.value / canvasWidthRaw
+        val scaleYRaw = maxHeight.value / canvasHeightRaw
+
+        // Subtle decorative border design inside card
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .border(0.5.dp, accentColor.copy(0.15f), RoundedCornerShape(3.dp))
+                .padding(10.dp)
+                .border(0.5.dp, accentColor.copy(0.12f), RoundedCornerShape(4.dp))
         )
 
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(
+        // Render QR code
+        if (card.qrCodeVisible) {
+            val qrSize = 50.dp
+            Box(
                 modifier = Modifier
-                    .weight(0.65f)
-                    .fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .absoluteOffset(
+                        x = (card.qrCodeX * scaleXRaw).coerceIn(0f, (maxWidth - qrSize).value).dp,
+                        y = (card.qrCodeY * scaleYRaw).coerceIn(0f, (maxHeight - qrSize).value).dp
+                    )
+                    .size(qrSize)
+                    .background(Color.White.copy(0.08F), RoundedCornerShape(5.dp))
+                    .border(1.dp, accentColor.copy(0.4f), RoundedCornerShape(5.dp)),
+                contentAlignment = Alignment.Center
             ) {
-                Column {
-                    if (visibleFields.contains("companyName")) {
-                        Text(
-                            text = card.companyName,
-                            color = accentColor,
-                            fontSize = 11.sp,
-                            fontFamily = fFamily,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    if (visibleFields.contains("fullName")) {
-                        Text(
-                            text = card.fullName,
-                            color = Color.White,
-                            fontSize = 15.sp,
-                            fontFamily = fFamily,
-                            fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
-                    if (visibleFields.contains("jobTitle")) {
-                        Text(
-                            text = card.jobTitle.uppercase(),
-                            color = Color.LightGray.copy(0.8F),
-                            fontSize = 8.sp,
-                            fontFamily = fFamily,
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = 0.5.sp,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    if (visibleFields.contains("mobileNumber") && card.mobileNumber.isNotEmpty()) {
-                        Text(
-                            text = "📞 " + card.mobileNumber,
-                            color = Color.LightGray.copy(0.7F),
-                            fontSize = 7.5.sp,
-                            fontFamily = fFamily,
-                            maxLines = 1
-                        )
-                    }
-                    if (visibleFields.contains("email") && card.email.isNotEmpty()) {
-                        Text(
-                            text = "✉ " + card.email,
-                            color = Color.LightGray.copy(0.7F),
-                            fontSize = 7.5.sp,
-                            fontFamily = fFamily,
-                            maxLines = 1
-                        )
-                    }
-                    if (visibleFields.contains("website") && card.website.isNotEmpty()) {
-                        Text(
-                            text = "🌐 " + card.website,
-                            color = Color.LightGray.copy(0.7F),
-                            fontSize = 7.5.sp,
-                            fontFamily = fFamily,
-                            maxLines = 1
-                        )
-                    }
-                    if (visibleFields.contains("address") && card.address.isNotEmpty()) {
-                        Text(
-                            text = "📍 " + card.address,
-                            color = Color.LightGray.copy(0.7F),
-                            fontSize = 7.5.sp,
-                            fontFamily = fFamily,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .weight(0.35f)
-                    .fillMaxHeight(),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Bottom
-            ) {
-                if (card.qrCodeVisible) {
-                    Box(
-                        modifier = Modifier
-                            .size(54.dp)
-                            .background(Color.White.copy(0.08F), RoundedCornerShape(6.dp))
-                            .border(1.dp, accentColor.copy(0.4f), RoundedCornerShape(6.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Box(modifier = Modifier.size(8.dp).background(accentColor))
-                                Box(modifier = Modifier.size(8.dp).background(Color.Transparent))
-                                Box(modifier = Modifier.size(8.dp).background(accentColor))
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Box(modifier = Modifier.size(8.dp).background(Color.Transparent))
-                                Box(modifier = Modifier.size(8.dp).background(accentColor))
-                                Box(modifier = Modifier.size(8.dp).background(Color.Transparent))
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Box(modifier = Modifier.size(8.dp).background(accentColor))
-                                Box(modifier = Modifier.size(8.dp).background(Color.Transparent))
-                                Box(modifier = Modifier.size(8.dp).background(accentColor))
-                            }
+                if (card.qrCodeType == "UPLOADED" && !card.qrCodeBase64Image.isNullOrEmpty()) {
+                    val base64Bytes = try { android.util.Base64.decode(card.qrCodeBase64Image, android.util.Base64.DEFAULT) } catch (e: Exception) { null }
+                    if (base64Bytes != null) {
+                        val bmpVal = android.graphics.BitmapFactory.decodeByteArray(base64Bytes, 0, base64Bytes.size)
+                        if (bmpVal != null) {
+                            androidx.compose.foundation.Image(
+                                bitmap = bmpVal.asImageBitmap(),
+                                contentDescription = "Custom QR",
+                                modifier = Modifier.size(42.dp)
+                            )
                         }
                     }
+                } else {
+                    com.example.utils.QRCodeComposable(
+                        data = card.qrCodeData,
+                        sizeDp = 42.dp,
+                        colorHex = card.qrCodeColor,
+                        shape = card.qrCodeShape
+                    )
                 }
             }
+        }
+
+        // Company Name
+        if (visibleFields.contains("companyName")) {
+            Text(
+                text = card.companyName,
+                color = accentColor,
+                fontSize = (card.companyNameSize * 0.70f).sp,
+                fontFamily = fFamily,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.absoluteOffset(
+                    x = (card.companyNameX * scaleXRaw).dp,
+                    y = (card.companyNameY * scaleYRaw).dp
+                )
+            )
+        }
+
+        // Full Name
+        if (visibleFields.contains("fullName")) {
+            Text(
+                text = card.fullName,
+                color = Color.White,
+                fontSize = (card.fullNameSize * 0.70f).sp,
+                fontFamily = fFamily,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.absoluteOffset(
+                    x = (card.fullNameX * scaleXRaw).dp,
+                    y = (card.fullNameY * scaleYRaw).dp
+                )
+            )
+        }
+
+        // Job Title
+        if (visibleFields.contains("jobTitle")) {
+            Text(
+                text = card.jobTitle.uppercase(),
+                color = Color.LightGray.copy(0.8F),
+                fontSize = (card.jobTitleSize * 0.70f).sp,
+                fontFamily = fFamily,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.5.sp,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.absoluteOffset(
+                    x = (card.jobTitleX * scaleXRaw).dp,
+                    y = (card.jobTitleY * scaleYRaw).dp
+                )
+            )
+        }
+
+        // Contacts list
+        if (visibleFields.contains("mobileNumber") && card.mobileNumber.isNotEmpty()) {
+            Text(
+                text = "📞 " + card.mobileNumber,
+                color = Color.LightGray.copy(0.7F),
+                fontSize = (card.mobileNumberSize * 0.70f).sp,
+                fontFamily = fFamily,
+                maxLines = 1,
+                modifier = Modifier.absoluteOffset(
+                    x = (card.mobileNumberX * scaleXRaw).dp,
+                    y = (card.mobileNumberY * scaleYRaw).dp
+                )
+            )
+        }
+
+        if (visibleFields.contains("email") && card.email.isNotEmpty()) {
+            Text(
+                text = "✉ " + card.email,
+                color = Color.LightGray.copy(0.7F),
+                fontSize = (card.emailSize * 0.70f).sp,
+                fontFamily = fFamily,
+                maxLines = 1,
+                modifier = Modifier.absoluteOffset(
+                    x = (card.emailX * scaleXRaw).dp,
+                    y = (card.emailY * scaleYRaw).dp
+                )
+            )
+        }
+
+        if (visibleFields.contains("website") && card.website.isNotEmpty()) {
+            Text(
+                text = "🌐 " + card.website,
+                color = Color.LightGray.copy(0.7F),
+                fontSize = (card.websiteSize * 0.70f).sp,
+                fontFamily = fFamily,
+                maxLines = 1,
+                modifier = Modifier.absoluteOffset(
+                    x = (card.websiteX * scaleXRaw).dp,
+                    y = (card.websiteY * scaleYRaw).dp
+                )
+            )
+        }
+
+        if (visibleFields.contains("address") && card.address.isNotEmpty()) {
+            Text(
+                text = "📍 " + card.address,
+                color = Color.LightGray.copy(0.7F),
+                fontSize = (card.addressSize * 0.70f).sp,
+                fontFamily = fFamily,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.absoluteOffset(
+                    x = (card.addressX * scaleXRaw).dp,
+                    y = (card.addressY * scaleYRaw).dp
+                )
+            )
         }
     }
 }
